@@ -1,5 +1,6 @@
 import os
 import time
+import hashlib
 import requests
 from datetime import datetime, timezone, timedelta
 from collections import defaultdict
@@ -446,12 +447,13 @@ def resolve_slack_token():
     if len(raw) >= 31:
         candidates.append(("legacy-suffix-reconstructed", "xoxb" + raw[4:31] + "bFqMGfkmHBzvLRtU1It2ptnt"))
 
-    print(f"SLACK_BOT_TOKEN as received: length={len(raw)}, starts='{raw[:6]}', ends='{raw[-6:]}'")
+    print(f"SLACK_BOT_TOKEN as received: length={len(raw)}, starts='{raw[:6]}', ends='{raw[-6:]}', sha256={hashlib.sha256(raw.encode()).hexdigest()}")
 
     for label, token in candidates:
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
         r = requests.post("https://slack.com/api/auth.test", headers={"Authorization": f"Bearer {token}"}, timeout=15)
         data = r.json()
-        print(f"  auth.test with {label} token: ok={data.get('ok')} error={data.get('error')}")
+        print(f"  {label}: sha256={token_hash} ok={data.get('ok')} error={data.get('error')}")
         if data.get("ok"):
             SLACK_TOKEN = token
             print(f"  Using {label} token (bot: {data.get('user')}, team: {data.get('team')})")
