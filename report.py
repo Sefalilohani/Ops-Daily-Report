@@ -148,6 +148,35 @@ CATEGORY_TAGS = {
     "MISC":               {"usergroup": "S05BY1H4HJ5", "lead": "U017K6KQT2A"},  # svin-misc, Thanveer
 }
 
+# Short column headers for Task Type in the main table (mirrors the style of the
+# existing "Intern Daily Task Report" bot — QC / GRD / INIT as columns, not sub-rows).
+TASK_TYPE_INFO = {
+    "CASE_ANALYSIS": ("CA", "Case Analysis"),
+    "INITIATION": ("INIT", "Initiation"),
+    "QC": ("QC", "QC"),
+    "GRADING": ("GRD", "Grading"),
+    "FOLLOW_UP": ("FU", "Follow Up"),
+    "EMAIL_CLEARANCE": ("EC", "Email Clearance"),
+    "PAYMENTS_SETTLEMENT": ("PS", "Payment Settlement"),
+    "ADDITIONAL_TASKS": ("AT", "Additional Tasks"),
+    "RESEARCH": ("RES", "Research"),
+    "RESEARCH_FOLLOW_UP": ("RFU", "Research Follow Up"),
+    "INSUFFICIENCY_CLEARANCE": ("IC", "Insufficiency Clearance"),
+    "VENDOR_MANAGEMENT": ("VM", "Vendor Management"),
+    "CONSENT_REVIEW": ("CR", "Consent Review"),
+    "DOCUMENTS_CROPPING": ("DC", "Documents Cropping"),
+    "WHATSAPP_CLEARANCE": ("WC", "WhatsApp Clearance"),
+    "WHATSAPP_FOLLOW_UP": ("WFU", "WhatsApp Follow Up"),
+}
+
+
+def task_type_info(raw_task_type):
+    if raw_task_type in TASK_TYPE_INFO:
+        return TASK_TYPE_INFO[raw_task_type]
+    label = humanize(raw_task_type)
+    return label[:4].upper(), label
+
+
 # Known name prefixes agents' Redash display names carry (e.g. "C A Manash Kashyap").
 # Stripped for matching so members can be listed with or without the prefix.
 NAME_PREFIXES = [
@@ -300,14 +329,19 @@ def build_agent_data(completed_rows, error_rows, case_add_rows):
     Returns dict keyed by clean_name(agent) ->
       {
         "display_name": <best display name seen>,
-        "combos": {"Case Analysis - Address": count, ...},
+        "task_totals": {"QC": 178, "GRD": 32, ...},        # Task Type -> completed count
+        "task_labels": {"QC": "QC", "GRD": "Grading", ...},  # Task Type abbr -> full label
+        "task_check": {"QC": {"Address": 10, "Court": 10, ...}, ...},  # per Task Type, Check Type breakdown
         "completed_total": int,
         "error_total": int,
         "case_add_total": int,
       }
     """
     data = defaultdict(lambda: {
-        "display_name": None, "combos": defaultdict(int),
+        "display_name": None,
+        "task_totals": defaultdict(int),
+        "task_labels": {},
+        "task_check": defaultdict(lambda: defaultdict(int)),
         "completed_total": 0, "error_total": 0, "case_add_total": 0,
     })
 
@@ -316,13 +350,15 @@ def build_agent_data(completed_rows, error_rows, case_add_rows):
         key = clean_name(raw_name)
         if not key:
             continue
-        task = humanize(row.get("Task Type"))
-        check = humanize(row.get("Check Type"))
-        combo = f"{task} - {check}" if check != "N/A" else task
+        abbr, full_label = task_type_info(row.get("Task Type") or "")
+        check_raw = row.get("Check Type")
         count = int(row.get("Completed Count") or 0)
         d = data[key]
         d["display_name"] = d["display_name"] or raw_name
-        d["combos"][combo] += count
+        d["task_totals"][abbr] += count
+        d["task_labels"][abbr] = full_label
+        if check_raw and check_raw != "N/A":
+            d["task_check"][abbr][humanize(check_raw)] += count
         d["completed_total"] += count
 
     for row in error_rows:
@@ -373,19 +409,19 @@ def match_member(member, agent_data, token_index):
 
 
 # ── FORMAT SLACK MESSAGE ────────────────────────────────────────
-# Compact, bullet-style per agent (not a wide table — a table with one column per
-# distinct Task+Check combo got so wide/long it caused Slack to fragment the message
-# across several separate posts). Each agent's own combos are listed inline instead,
-# so length scales with what that agent actually did, not the union across everyone.
+# Main message: one row per agent, Task Type as columns (like the existing "Intern
+# Daily Task Report" bot: QC / GRD / INIT columns), plus Total/Errors/Case Addition.
+# Thread reply: Check Type breakdown per agent per Task Type, as small column tables —
+# full detail stays available, but tucked into the thread instead of the main channel.
 
 def format_category_section(label, members, agent_data):
-    """Returns (section_text, completed_total, error_total, case_add_total)."""
+    """Returns (main_text, thread_text_or_None, completed_total, error_total, case_add_total)."""
     tag = CATEGORY_TAGS.get(label)
     tag_line = f"cc: <!subteam^{tag['usergroup']}> <@{tag['lead']}>" if tag else ""
 
     if not members:
         text = f"*{label}*\n_No members configured yet._"
-        return (text + (f"\n{tag_line}" if tag_line else "")), 0, 0, 0
+        return (text + (f"\n{tag_line}" if tag_line else "")), None, 0, 0, 0
 
     token_index = build_token_index(agent_data)
     idle_names = []
@@ -397,60 +433,94 @@ def format_category_section(label, members, agent_data):
         if d is None:
             unmatched.append(member)
             continue
-        matched_rows.append((d["display_name"] or member, d["combos"], d["completed_total"], d["error_total"], d["case_add_total"]))
+        matched_rows.append((d["display_name"] or member, d))
 
-    matched_rows.sort(key=lambda r: r[2], reverse=True)
+    matched_rows.sort(key=lambda r: r[1]["completed_total"], reverse=True)
 
     # Only show Case Addition at all for teams where it's actually relevant that day —
     # most teams (QC, Grading, Research, ...) never touch case additions, so a
     # constant "Case Addition: 0" on every line is pure noise for them.
-    show_case_addition = any(case_add > 0 for *_, case_add in matched_rows)
+    show_case_addition = any(d["case_add_total"] > 0 for _, d in matched_rows)
 
-    active_rows = []
+    active = []
     tot_done = tot_err = tot_case = 0
-    for name, combos, done, err, case_add in matched_rows:
-        tot_done += done
-        tot_err += err
-        tot_case += case_add
-        if done == 0 and err == 0 and case_add == 0:
+    for name, d in matched_rows:
+        tot_done += d["completed_total"]
+        tot_err += d["error_total"]
+        tot_case += d["case_add_total"]
+        if d["completed_total"] == 0 and d["error_total"] == 0 and d["case_add_total"] == 0:
             idle_names.append(name)
             continue
-        combo_bits = ", ".join(
-            f"{c}: {v}" for c, v in sorted(combos.items(), key=lambda kv: kv[1], reverse=True) if v > 0
-        )
-        active_rows.append((name, done, err, case_add, combo_bits))
+        active.append((name, d))
 
-    if active_rows:
-        name_w = max([len("Agent")] + [len(r[0]) for r in active_rows] + [len("TEAM TOTAL")]) + 2
-        done_w = max([len("Completed")] + [len(str(r[1])) for r in active_rows] + [len(str(tot_done))]) + 2
-        err_w = max([len("Errors")] + [len(str(r[2])) for r in active_rows] + [len(str(tot_err))]) + 2
-        case_w = (max([len("Case Addn")] + [len(str(r[3])) for r in active_rows] + [len(str(tot_case))]) + 2
-                  if show_case_addition else 0)
+    thread_text = None
+    if not active:
+        main_lines = ["_No activity today._"]
+    else:
+        # Task Type columns actually used by this team today, ordered by team-wide volume.
+        task_col_totals = defaultdict(int)
+        for _, d in active:
+            for abbr, cnt in d["task_totals"].items():
+                task_col_totals[abbr] += cnt
+        task_cols = sorted(task_col_totals, key=lambda a: task_col_totals[a], reverse=True)
 
-        header = "Agent".ljust(name_w) + "Completed".rjust(done_w) + "Errors".rjust(err_w)
+        name_w = max([len("Agent")] + [len(n) for n, _ in active] + [len("TEAM TOTAL")]) + 2
+        col_w = {a: max(len(a), 5) + 2 for a in task_cols}
+        done_w = max(len("Total"), len(str(tot_done))) + 2
+        err_w = max(len("Err"), len(str(tot_err))) + 2
+        case_w = max(len("Case+"), len(str(tot_case))) + 2 if show_case_addition else 0
+
+        header = "Agent".ljust(name_w)
+        for a in task_cols:
+            header += a.rjust(col_w[a])
+        header += "Total".rjust(done_w) + "Err".rjust(err_w)
         if show_case_addition:
-            header += "Case Addn".rjust(case_w)
+            header += "Case+".rjust(case_w)
         sep = "-" * len(header)
 
         table_lines = [header, sep]
-        for name, done, err, case_add, combo_bits in active_rows:
-            row = name.ljust(name_w) + str(done).rjust(done_w) + str(err).rjust(err_w)
+        for name, d in active:
+            row = name.ljust(name_w)
+            for a in task_cols:
+                v = d["task_totals"].get(a, 0)
+                row += (str(v) if v else "-").rjust(col_w[a])
+            row += str(d["completed_total"]).rjust(done_w) + str(d["error_total"]).rjust(err_w)
             if show_case_addition:
-                row += str(case_add).rjust(case_w)
+                row += str(d["case_add_total"]).rjust(case_w)
             table_lines.append(row)
-            if combo_bits:
-                table_lines.append(f"   {combo_bits}")
         table_lines.append(sep)
-        total_row = "TEAM TOTAL".ljust(name_w) + str(tot_done).rjust(done_w) + str(tot_err).rjust(err_w)
+
+        total_row = "TEAM TOTAL".ljust(name_w)
+        for a in task_cols:
+            total_row += str(task_col_totals[a]).rjust(col_w[a])
+        total_row += str(tot_done).rjust(done_w) + str(tot_err).rjust(err_w)
         if show_case_addition:
             total_row += str(tot_case).rjust(case_w)
         table_lines.append(total_row)
 
-        table_block = "```\n" + "\n".join(table_lines) + "\n```"
-    else:
-        table_block = "_No activity today._"
+        main_lines = ["```\n" + "\n".join(table_lines) + "\n```"]
 
-    lines = [table_block]
+        # Thread: Check Type breakdown, one numbered block per agent, per Task Type
+        # they touched — blank line between agents so it stays scannable, not a wall.
+        thread_blocks = [f":clipboard: *{label} — Check Type Breakdown*"]
+        for i, (name, d) in enumerate(active, 1):
+            sorted_tasks = sorted(d["task_check"].items(), key=lambda kv: sum(kv[1].values()), reverse=True)
+            if not sorted_tasks:
+                continue
+            agent_blocks = [f"*{i}. {name}*"]
+            for abbr, checks in sorted_tasks:
+                check_items = sorted(checks.items(), key=lambda kv: kv[1], reverse=True)
+                if not check_items:
+                    continue
+                full_label = d["task_labels"].get(abbr, abbr)
+                c_w = {c: max(len(c), len(str(v))) + 2 for c, v in check_items}
+                c_header = "".join(c.ljust(c_w[c]) for c, _ in check_items)
+                c_values = "".join(str(v).ljust(c_w[c]) for c, v in check_items)
+                agent_blocks.append(f"_{full_label}_\n```\n{c_header}\n{c_values}\n```")
+            thread_blocks.append("\n".join(agent_blocks))
+        thread_text = "\n\n".join(thread_blocks) if len(thread_blocks) > 1 else None
+
+    lines = main_lines
     if idle_names:
         lines.append(f"_No activity: {', '.join(idle_names)}_")
     if unmatched:
@@ -458,17 +528,15 @@ def format_category_section(label, members, agent_data):
     if tag_line:
         lines.append(tag_line)
 
-    return "\n".join(lines), tot_done, tot_err, tot_case
+    return "\n".join(lines), thread_text, tot_done, tot_err, tot_case
 
 
 def format_channel_messages(channel_cfg, date_label, agent_data):
     """
-    Returns a list of message strings to post, in order — one per category, plus a
-    trailing grand-total message if the channel combines more than one category.
-    Posting each category separately (rather than joining into one giant string)
-    is what actually fixes the "Slack splits it mid-sentence" problem: even after
-    capping the per-agent combo breakdown, a 20+ agent category comfortably fits
-    in one message, but two combined categories together sometimes still don't.
+    Returns a list of (main_text, thread_text) tuples — one per category, plus a
+    trailing grand-total message (no thread) if the channel combines more than one
+    category. Posting each category separately (rather than joining into one giant
+    string) is what actually fixes the "Slack splits it mid-sentence" problem.
     """
     categories = channel_cfg["categories"]
 
@@ -479,9 +547,9 @@ def format_channel_messages(channel_cfg, date_label, agent_data):
     messages = []
     grand_done = grand_err = grand_case = 0
     for c in categories:
-        text, done, err, case_add = format_category_section(c["label"], c["members"], agent_data)
+        text, thread_text, done, err, case_add = format_category_section(c["label"], c["members"], agent_data)
         header = f"\U0001f4ca *{c['label']} Team Daily Task Report — {date_label}*"
-        messages.append(f"{header}\n\n{text}")
+        messages.append((f"{header}\n\n{text}", thread_text))
         grand_done += done
         grand_err += err
         grand_case += case_add
@@ -491,9 +559,10 @@ def format_channel_messages(channel_cfg, date_label, agent_data):
         grand_line = f"Completed: *{grand_done}* · Errors: *{grand_err}*"
         if grand_case > 0:
             grand_line += f" · Case Addition: *{grand_case}*"
-        messages.append(
-            f":bar_chart: *{combined_name} — Combined Channel Total — {date_label}*\n\n{grand_line}"
-        )
+        messages.append((
+            f":bar_chart: *{combined_name} — Combined Channel Total — {date_label}*\n\n{grand_line}",
+            None
+        ))
 
     return messages
 
@@ -533,12 +602,15 @@ def chunk_message(text, max_len=MAX_MESSAGE_CHARS):
     return chunks
 
 
-def post_slack_message(channel_id, text):
+def post_slack_message(channel_id, text, thread_ts=None):
     for chunk in chunk_message(text):
+        payload = {"channel": channel_id, "text": chunk}
+        if thread_ts:
+            payload["thread_ts"] = thread_ts
         r = requests.post(
             "https://slack.com/api/chat.postMessage",
             headers={"Authorization": f"Bearer {SLACK_TOKEN}", "Content-Type": "application/json"},
-            json={"channel": channel_id, "text": chunk},
+            json=payload,
         )
         r.raise_for_status()
         resp = r.json()
@@ -578,11 +650,18 @@ def run_report():
         messages = format_channel_messages(channel_cfg, date_label, agent_data)
         target_channel = TEST_CHANNEL_ID or channel_cfg["channel_id"]
 
-        for message in messages:
+        for main_text, thread_text in messages:
             if TEST_CHANNEL_ID:
-                message = f"_[TEST RUN — would normally post to {channel_cfg['channel_id']}]_\n" + message
-            for ts in post_slack_message(target_channel, message):
+                main_text = f"_[TEST RUN — would normally post to {channel_cfg['channel_id']}]_\n" + main_text
+
+            main_ts = None
+            for ts in post_slack_message(target_channel, main_text):
+                main_ts = main_ts or ts
                 print(f"Posted to {target_channel} (ts={ts})")
+
+            if thread_text and main_ts:
+                for ts in post_slack_message(target_channel, thread_text, thread_ts=main_ts):
+                    print(f"  Thread reply posted (ts={ts})")
 
 
 if __name__ == "__main__":
