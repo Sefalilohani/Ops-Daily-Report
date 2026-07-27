@@ -136,16 +136,16 @@ CHANNELS = [
 # IDs resolved from the workspace directly, not typed as free text (Slack IDs are
 # case-sensitive and this environment's text fields have been auto-mangling case).
 CATEGORY_TAGS = {
-    "CA + Initiation":    {"usergroup": "S046ESUQLS1", "lead": "U017K6KQT2A"},  # opsinitiation, Thanveer
-    "Grading":            {"usergroup": "S0BKVL7E0SH", "lead": "UN1E2L4G0"},    # opsgrading, Selva
-    "Followups":          {"usergroup": "S08VARCA849", "lead": "UURRMS3MG"},    # opsfollowups, Shalini
-    "QC":                 {"usergroup": "S046WGXTBED", "lead": "U03BUG17X54"},  # opsqc, Ramya
-    "Email Clearance":    {"usergroup": "S0BKX213HFG", "lead": "U03BUG17X54"},  # opsemailtriage, Ramya
-    "MISC":               {"usergroup": "S04K6P0CYES", "lead": "U017K6KQT2A"},  # opsmisc, Thanveer
-    "Payment Settlement": {"usergroup": "S0BKZ13RE82", "lead": "U017K6KQT2A"},  # paymentsettlement, Thanveer
-    "Case Addition":      {"usergroup": "S05BY1H4HJ5", "lead": "UURRMS3MG"},    # opscaseaddition, Shalini
-    "Research":           {"usergroup": "S0BLTALCZA4", "lead": "UN1E2L4G0"},    # opsresearch, Selva
-    "Reference":          {"usergroup": "S086WH7H6A0", "lead": "UN1E2L4G0"},    # opsreference, Selva
+    "Grading":            {"usergroup": "S0BKVL7E0SH", "lead": "UN1E2L4G0"},    # ops-grading, Selva
+    "QC":                 {"usergroup": "S046ESUQLS1", "lead": "U03BUG17X54"},  # svin-qc, Ramya
+    "CA + Initiation":    {"usergroup": "S046WGXTBED", "lead": "U017K6KQT2A"},  # opsinitiation, Thanveer
+    "Research":           {"usergroup": "S08VARCA849", "lead": "UN1E2L4G0"},    # svin-emp-research, Selva
+    "Reference":          {"usergroup": "S04K6P0CYES", "lead": "UN1E2L4G0"},    # svin-ref, Selva
+    "Email Clearance":    {"usergroup": "S0BKZ13RE82", "lead": "U03BUG17X54"},  # opsemailtriage, Ramya
+    "Followups":          {"usergroup": "S0BLTALCZA4", "lead": "UURRMS3MG"},    # opsfollowup, Shalini
+    "Case Addition":      {"usergroup": "S086WH7H6A0", "lead": "UURRMS3MG"},    # svin-caseaddition, Shalini
+    "Payment Settlement": {"usergroup": "S0BKX213HFG", "lead": "U017K6KQT2A"},  # paymentsettlement, Thanveer
+    "MISC":               {"usergroup": "S05BY1H4HJ5", "lead": "U017K6KQT2A"},  # svin-misc, Thanveer
 }
 
 # Known name prefixes agents' Redash display names carry (e.g. "C A Manash Kashyap").
