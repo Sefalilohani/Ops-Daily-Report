@@ -430,11 +430,10 @@ def format_channel_message(channel_cfg, date_label, agent_data):
 
 
 # ── SLACK AUTH ───────────────────────────────────────────────────
-# GitHub Secrets have, in the past, corrupted this token in different ways depending
-# on how/where it was pasted from (e.g. Error-report's secret got its suffix
-# lowercased; this repo's got its literal "xoxb-" prefix auto-capitalized to "Xoxb-").
-# Rather than assume one specific corruption, try several corrections and fall back
-# to the raw value, verifying each with a real auth.test call.
+# This repo has its own bot token (bot: eod_pending_task_repo) — separate from
+# whatever Error-report/TAT-report use, so there's no shared hardcoded suffix to
+# reconstruct here. Only apply generic, content-agnostic corrections (e.g. a
+# mis-capitalized literal "xoxb-" prefix), and verify each with a real auth.test call.
 
 def resolve_slack_token():
     global SLACK_TOKEN
@@ -444,8 +443,6 @@ def resolve_slack_token():
     if raw[:5].lower() == "xoxb-" and raw[:5] != "xoxb-":
         candidates.append(("prefix-case-fixed", "xoxb-" + raw[5:]))
     candidates.append(("raw", raw))
-    if len(raw) >= 31:
-        candidates.append(("legacy-suffix-reconstructed", "xoxb" + raw[4:31] + "bFqMGfkmHBzvLRtU1It2ptnt"))
 
     print(f"SLACK_BOT_TOKEN as received: length={len(raw)}, starts='{raw[:6]}', ends='{raw[-6:]}', sha256={hashlib.sha256(raw.encode()).hexdigest()}")
 
