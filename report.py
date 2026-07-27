@@ -402,6 +402,11 @@ def format_category_section(label, members, agent_data):
 
     matched_rows.sort(key=lambda r: r[2], reverse=True)
 
+    # Only show Case Addition at all for teams where it's actually relevant that day —
+    # most teams (QC, Grading, Research, ...) never touch case additions, so a
+    # constant "Case Addition: 0" on every line is pure noise for them.
+    show_case_addition = any(case_add > 0 for *_, case_add in matched_rows)
+
     tot_done = tot_err = tot_case = 0
     for name, combos, done, err, case_add in matched_rows:
         tot_done += done
@@ -420,7 +425,9 @@ def format_category_section(label, members, agent_data):
         remaining = len([c for c in sorted_combos if c[1] > 0]) - len(shown)
         if remaining > 0:
             combo_bits += f", +{remaining} more"
-        line = f"• *{name}* — Completed: *{done}* · Errors: *{err}* · Case+: *{case_add}*"
+        line = f"• *{name}* — Completed: *{done}* · Errors: *{err}*"
+        if show_case_addition:
+            line += f" · Case Addition: *{case_add}*"
         if combo_bits:
             line += f"\n     ↳ {combo_bits}"
         active_lines.append(line)
@@ -431,7 +438,10 @@ def format_category_section(label, members, agent_data):
         lines.append(f"_No activity: {', '.join(idle_names)}_")
     if unmatched:
         lines.append(f"_No data found for: {', '.join(unmatched)}_")
-    lines.append(f"*Team Total* — Completed: *{tot_done}* · Errors: *{tot_err}* · Case+: *{tot_case}*")
+    total_line = f"*Team Total* — Completed: *{tot_done}* · Errors: *{tot_err}*"
+    if show_case_addition:
+        total_line += f" · Case Addition: *{tot_case}*"
+    lines.append(total_line)
     if tag_line:
         lines.append(tag_line)
 
@@ -465,9 +475,11 @@ def format_channel_messages(channel_cfg, date_label, agent_data):
 
     if len(categories) > 1:
         combined_name = " + ".join(c["label"] for c in categories)
+        grand_line = f"Completed: *{grand_done}* · Errors: *{grand_err}*"
+        if grand_case > 0:
+            grand_line += f" · Case Addition: *{grand_case}*"
         messages.append(
-            f":bar_chart: *{combined_name} — Combined Channel Total — {date_label}*\n\n"
-            f"Completed: *{grand_done}* · Errors: *{grand_err}* · Case+: *{grand_case}*"
+            f":bar_chart: *{combined_name} — Combined Channel Total — {date_label}*\n\n{grand_line}"
         )
 
     return messages
