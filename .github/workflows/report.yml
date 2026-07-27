@@ -1,0 +1,32 @@
+name: CA + Initiation Daily Task Report
+
+on:
+  schedule:
+    - cron: '0 3 * * *'   # 8:30 AM IST
+  workflow_dispatch:
+    inputs:
+      report_date:
+        description: 'Override date to report on (YYYY-MM-DD). Leave blank for "yesterday" (IST).'
+        required: false
+        default: ''
+
+jobs:
+  send-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run daily task report
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          REPORT_DATE: ${{ github.event.inputs.report_date }}
+        run: python report.py
