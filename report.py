@@ -410,7 +410,16 @@ def format_category_section(label, members, agent_data):
         if done == 0 and err == 0 and case_add == 0:
             idle_names.append(name)
             continue
-        combo_bits = ", ".join(f"{c}: {v}" for c, v in sorted(combos.items()) if v > 0)
+        # Cap the per-agent breakdown — some agents touch a dozen+ distinct Task+Check
+        # combos in a day, and listing all of them for everyone is what made messages
+        # long enough for Slack to split them mid-sentence. Top 3 covers the shape of
+        # where their day went; the exact figures are still in the source Redash query.
+        sorted_combos = sorted(combos.items(), key=lambda kv: kv[1], reverse=True)
+        shown = [c for c in sorted_combos if c[1] > 0][:3]
+        combo_bits = ", ".join(f"{c}: {v}" for c, v in shown)
+        remaining = len([c for c in sorted_combos if c[1] > 0]) - len(shown)
+        if remaining > 0:
+            combo_bits += f", +{remaining} more"
         line = f"• *{name}* — Completed: *{done}* · Errors: *{err}* · Case+: *{case_add}*"
         if combo_bits:
             line += f"\n     ↳ {combo_bits}"
@@ -429,25 +438,39 @@ def format_category_section(label, members, agent_data):
     return "\n".join(lines), tot_done, tot_err, tot_case
 
 
-def format_channel_message(channel_cfg, date_label, agent_data):
+def format_channel_messages(channel_cfg, date_label, agent_data):
+    """
+    Returns a list of message strings to post, in order — one per category, plus a
+    trailing grand-total message if the channel combines more than one category.
+    Posting each category separately (rather than joining into one giant string)
+    is what actually fixes the "Slack splits it mid-sentence" problem: even after
+    capping the per-agent combo breakdown, a 20+ agent category comfortably fits
+    in one message, but two combined categories together sometimes still don't.
+    """
     categories = channel_cfg["categories"]
-    report_name = " + ".join(c["label"] for c in categories) + " Team Daily Task Report"
-    header = f"\U0001f4ca *{report_name} — {date_label}*"
 
-    sections = []
+    # Each category is its own team with its own report name — "CA + Initiation" is
+    # the one genuine combined team (one roster group); Grading/Followups, QC/Email
+    # Clearance, and MISC/Payment Settlement are distinct teams that just share a
+    # Slack channel, so they get separate headers, not a merged "X + Y" name.
+    messages = []
     grand_done = grand_err = grand_case = 0
     for c in categories:
         text, done, err, case_add = format_category_section(c["label"], c["members"], agent_data)
-        sections.append(text)
+        header = f"\U0001f4ca *{c['label']} Team Daily Task Report — {date_label}*"
+        messages.append(f"{header}\n\n{text}")
         grand_done += done
         grand_err += err
         grand_case += case_add
 
-    parts = [header] + sections
     if len(categories) > 1:
-        parts.append(f":bar_chart: *Channel Grand Total* — Completed: *{grand_done}* · Errors: *{grand_err}* · Case+: *{grand_case}*")
+        combined_name = " + ".join(c["label"] for c in categories)
+        messages.append(
+            f":bar_chart: *{combined_name} — Combined Channel Total — {date_label}*\n\n"
+            f"Completed: *{grand_done}* · Errors: *{grand_err}* · Case+: *{grand_case}*"
+        )
 
-    return "\n\n".join(parts)
+    return messages
 
 
 # ── SLACK AUTH ───────────────────────────────────────────────────
@@ -464,17 +487,39 @@ def resolve_slack_token():
 
 # ── POST TO SLACK ────────────────────────────────────────────────
 
-def post_slack(channel_id, text):
-    r = requests.post(
-        "https://slack.com/api/chat.postMessage",
-        headers={"Authorization": f"Bearer {SLACK_TOKEN}", "Content-Type": "application/json"},
-        json={"channel": channel_id, "text": text},
-    )
-    r.raise_for_status()
-    resp = r.json()
-    if not resp.get("ok"):
-        raise Exception(f"Slack API error for channel {channel_id}: {resp.get('error')}")
-    return resp["ts"]
+MAX_MESSAGE_CHARS = 3500  # conservative — this workspace has been observed fragmenting
+                          # single posts somewhere well under Slack's documented 40,000
+
+
+def chunk_message(text, max_len=MAX_MESSAGE_CHARS):
+    """Split text into pieces on line boundaries, never mid-line, each under max_len."""
+    if len(text) <= max_len:
+        return [text]
+    chunks, current = [], ""
+    for line in text.split("\n"):
+        candidate = f"{current}\n{line}" if current else line
+        if len(candidate) > max_len and current:
+            chunks.append(current)
+            current = line
+        else:
+            current = candidate
+    if current:
+        chunks.append(current)
+    return chunks
+
+
+def post_slack_message(channel_id, text):
+    for chunk in chunk_message(text):
+        r = requests.post(
+            "https://slack.com/api/chat.postMessage",
+            headers={"Authorization": f"Bearer {SLACK_TOKEN}", "Content-Type": "application/json"},
+            json={"channel": channel_id, "text": chunk},
+        )
+        r.raise_for_status()
+        resp = r.json()
+        if not resp.get("ok"):
+            raise Exception(f"Slack API error for channel {channel_id}: {resp.get('error')}")
+        yield resp["ts"]
 
 
 # ── MAIN ──────────────────────────────────────────────────────────
@@ -500,19 +545,19 @@ def run_report():
     agent_data = build_agent_data(completed_rows, error_rows, case_add_rows)
 
     for channel_cfg in CHANNELS:
-        message = format_channel_message(channel_cfg, date_label, agent_data)
         has_members = any(c["members"] for c in channel_cfg["categories"])
         if not has_members:
             print(f"Skipping channel {channel_cfg['channel_id']} — no members configured yet")
             continue
 
-        target_channel = channel_cfg["channel_id"]
-        if TEST_CHANNEL_ID:
-            message = f"_[TEST RUN — would normally post to {channel_cfg['channel_id']}]_\n" + message
-            target_channel = TEST_CHANNEL_ID
+        messages = format_channel_messages(channel_cfg, date_label, agent_data)
+        target_channel = TEST_CHANNEL_ID or channel_cfg["channel_id"]
 
-        ts = post_slack(target_channel, message)
-        print(f"Posted to {target_channel} (ts={ts})")
+        for message in messages:
+            if TEST_CHANNEL_ID:
+                message = f"_[TEST RUN — would normally post to {channel_cfg['channel_id']}]_\n" + message
+            for ts in post_slack_message(target_channel, message):
+                print(f"Posted to {target_channel} (ts={ts})")
 
 
 if __name__ == "__main__":
