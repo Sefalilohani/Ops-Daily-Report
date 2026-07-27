@@ -1,6 +1,5 @@
 import os
 import time
-import hashlib
 import requests
 from datetime import datetime, timezone, timedelta
 from collections import defaultdict
@@ -430,32 +429,15 @@ def format_channel_message(channel_cfg, date_label, agent_data):
 
 
 # ── SLACK AUTH ───────────────────────────────────────────────────
-# This repo has its own bot token (bot: eod_pending_task_repo) — separate from
-# whatever Error-report/TAT-report use, so there's no shared hardcoded suffix to
-# reconstruct here. Only apply generic, content-agnostic corrections (e.g. a
-# mis-capitalized literal "xoxb-" prefix), and verify each with a real auth.test call.
 
 def resolve_slack_token():
     global SLACK_TOKEN
-    raw = _raw_token
-    candidates = []
-
-    if raw[:5].lower() == "xoxb-" and raw[:5] != "xoxb-":
-        candidates.append(("prefix-case-fixed", "xoxb-" + raw[5:]))
-    candidates.append(("raw", raw))
-
-    print(f"SLACK_BOT_TOKEN as received: length={len(raw)}, starts='{raw[:6]}', ends='{raw[-6:]}', sha256={hashlib.sha256(raw.encode()).hexdigest()}")
-
-    for label, token in candidates:
-        token_hash = hashlib.sha256(token.encode()).hexdigest()
-        r = requests.post("https://slack.com/api/auth.test", headers={"Authorization": f"Bearer {token}"}, timeout=15)
-        data = r.json()
-        print(f"  {label}: sha256={token_hash} ok={data.get('ok')} error={data.get('error')}")
-        if data.get("ok"):
-            SLACK_TOKEN = token
-            print(f"  Using {label} token (bot: {data.get('user')}, team: {data.get('team')})")
-            return
-    raise Exception("No working Slack token — none of the corrected/raw SLACK_BOT_TOKEN variants passed auth.test. Re-check the secret value.")
+    SLACK_TOKEN = _raw_token
+    r = requests.post("https://slack.com/api/auth.test", headers={"Authorization": f"Bearer {SLACK_TOKEN}"}, timeout=15)
+    data = r.json()
+    if not data.get("ok"):
+        raise Exception(f"SLACK_BOT_TOKEN failed auth.test: {data.get('error')}. Re-check the secret in repo settings.")
+    print(f"Slack auth OK — bot: {data.get('user')}, team: {data.get('team')}")
 
 
 # ── POST TO SLACK ────────────────────────────────────────────────
