@@ -549,34 +549,18 @@ def format_category_section(label, members, agent_data):
 
 def format_channel_messages(channel_cfg, date_label, agent_data):
     """
-    Returns a list of message strings — one per category, plus a trailing grand-total
-    message if the channel combines more than one category. Posting each category
-    separately (rather than joining into one giant string) is what actually fixes
-    the "Slack splits it mid-sentence" problem.
+    Returns a list of message strings — every category posts fully independently
+    (its own header, its own tables, its own tag). No combined/cross-team summary —
+    "Grading" and "Followups" (etc.) sharing a Slack channel is just where they're
+    posted, not a reason to merge their numbers into a joint total.
     """
     categories = channel_cfg["categories"]
-
-    # Each category is its own team with its own report name — "CA + Initiation" is
-    # the one genuine combined team (one roster group); Grading/Followups, QC/Email
-    # Clearance, and MISC/Payment Settlement are distinct teams that just share a
-    # Slack channel, so they get separate headers, not a merged "X + Y" name.
     messages = []
-    grand_done = grand_err = grand_case = 0
     for c in categories:
-        bodies, done, err, case_add = format_category_section(c["label"], c["members"], agent_data)
+        bodies, _done, _err, _case_add = format_category_section(c["label"], c["members"], agent_data)
         header = f"\U0001f4ca *{c['label']} Team Daily Task Report — {date_label}*"
         messages.append(f"{header}\n\n{bodies[0]}")
         messages.extend(bodies[1:])
-        grand_done += done
-        grand_err += err
-        grand_case += case_add
-
-    if len(categories) > 1:
-        combined_name = " + ".join(c["label"] for c in categories)
-        grand_line = f"Completed: *{grand_done}* · Errors: *{grand_err}*"
-        if grand_case > 0:
-            grand_line += f" · Case Addition: *{grand_case}*"
-        messages.append(f":bar_chart: *{combined_name} — Combined Channel Total — {date_label}*\n\n{grand_line}")
 
     return messages
 
