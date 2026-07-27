@@ -20,6 +20,9 @@ REDASH_API_KEY = "CWcvNsz8fkzifFJPD6r7kc2T6TCU6pbhxa0z0nRm"
 IST = timezone(timedelta(hours=5, minutes=30))
 
 REPORT_DATE = os.environ.get("REPORT_DATE", "").strip()
+# When set, every channel's message is redirected here instead (with a marker showing
+# the real destination) — for test runs without touching the real CHANNELS routing.
+TEST_CHANNEL_ID = os.environ.get("TEST_CHANNEL_ID", "").strip()
 
 # ── CHANNEL / TEAM CONFIG ──────────────────────────────────────
 # Each channel gets ONE Slack message containing one table per category.
@@ -468,8 +471,14 @@ def run_report():
         if not has_members:
             print(f"Skipping channel {channel_cfg['channel_id']} — no members configured yet")
             continue
-        ts = post_slack(channel_cfg["channel_id"], message)
-        print(f"Posted to {channel_cfg['channel_id']} (ts={ts})")
+
+        target_channel = channel_cfg["channel_id"]
+        if TEST_CHANNEL_ID:
+            message = f"_[TEST RUN — would normally post to {channel_cfg['channel_id']}]_\n" + message
+            target_channel = TEST_CHANNEL_ID
+
+        ts = post_slack(target_channel, message)
+        print(f"Posted to {target_channel} (ts={ts})")
 
 
 if __name__ == "__main__":
