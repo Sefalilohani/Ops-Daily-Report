@@ -409,27 +409,63 @@ def match_member(member, agent_data, token_index):
 
 
 # ── FORMAT SLACK MESSAGE ────────────────────────────────────────
-# One message per team: agent-wise table (Task Type as columns, like the existing
-# "Intern Daily Task Report" bot), followed by two team-level aggregate tables — By
-# Task Type and By Check Type — matching the "Ops Cases Bot" report's style. No
-# thread needed; everything lands in the main channel.
+# One message per team, two agent-wise tables — same rows (agents), same
+# Total/Errors/Case Addition, just bifurcated two different ways: Task Type as
+# columns in the first table, Check Type as columns in the second.
 
-def build_two_col_table(title, totals, row_header):
-    """Simple rows=key, one Completed column, sorted desc, with a Total row."""
-    if not totals:
-        return None
-    items = sorted(totals.items(), key=lambda kv: kv[1], reverse=True)
-    total = sum(v for _, v in items)
-    name_w = max([len(row_header)] + [len(k) for k, _ in items] + [len("Total")]) + 2
-    val_w = max(len("Completed"), len(str(total))) + 2
-    header = row_header.ljust(name_w) + "Completed".rjust(val_w)
+def agent_check_totals(d):
+    """Flatten a per-agent task_check breakdown into Check Type -> count, across all task types."""
+    totals = defaultdict(int)
+    for checks in d["task_check"].values():
+        for check_label, cnt in checks.items():
+            totals[check_label] += cnt
+    return totals
+
+
+def build_agent_col_table(active, tot_done, tot_err, tot_case, show_case_addition, col_getter):
+    """Agent-wise table: rows=agents, columns=whatever col_getter(d) returns, plus Total/Err/Case+."""
+    col_totals = defaultdict(int)
+    for _, d in active:
+        for col, cnt in col_getter(d).items():
+            col_totals[col] += cnt
+    cols = sorted(col_totals, key=lambda c: col_totals[c], reverse=True)
+
+    name_w = max([len("Agent")] + [len(n) for n, _ in active] + [len("TEAM TOTAL")]) + 2
+    col_w = {c: max(len(c), 5) + 2 for c in cols}
+    done_w = max(len("Total"), len(str(tot_done))) + 2
+    err_w = max(len("Err"), len(str(tot_err))) + 2
+    case_w = max(len("Case+"), len(str(tot_case))) + 2 if show_case_addition else 0
+
+    header = "Agent".ljust(name_w)
+    for c in cols:
+        header += c.rjust(col_w[c])
+    header += "Total".rjust(done_w) + "Err".rjust(err_w)
+    if show_case_addition:
+        header += "Case+".rjust(case_w)
     sep = "-" * len(header)
+
     lines = [header, sep]
-    for k, v in items:
-        lines.append(k.ljust(name_w) + str(v).rjust(val_w))
+    for name, d in active:
+        row = name.ljust(name_w)
+        counts = col_getter(d)
+        for c in cols:
+            v = counts.get(c, 0)
+            row += (str(v) if v else "-").rjust(col_w[c])
+        row += str(d["completed_total"]).rjust(done_w) + str(d["error_total"]).rjust(err_w)
+        if show_case_addition:
+            row += str(d["case_add_total"]).rjust(case_w)
+        lines.append(row)
     lines.append(sep)
-    lines.append("Total".ljust(name_w) + str(total).rjust(val_w))
-    return f"*{title}*\n```\n" + "\n".join(lines) + "\n```"
+
+    total_row = "TEAM TOTAL".ljust(name_w)
+    for c in cols:
+        total_row += str(col_totals[c]).rjust(col_w[c])
+    total_row += str(tot_done).rjust(done_w) + str(tot_err).rjust(err_w)
+    if show_case_addition:
+        total_row += str(tot_case).rjust(case_w)
+    lines.append(total_row)
+
+    return "\n".join(lines)
 
 
 def format_category_section(label, members, agent_data):
@@ -474,66 +510,22 @@ def format_category_section(label, members, agent_data):
     if not active:
         main_lines = ["_No activity today._"]
     else:
-        # Task Type columns actually used by this team today, ordered by team-wide volume.
-        task_col_totals = defaultdict(int)
-        for _, d in active:
-            for abbr, cnt in d["task_totals"].items():
-                task_col_totals[abbr] += cnt
-        task_cols = sorted(task_col_totals, key=lambda a: task_col_totals[a], reverse=True)
+        # Table 1: agent-wise, Task Type as columns.
+        task_table = build_agent_col_table(
+            active, tot_done, tot_err, tot_case, show_case_addition,
+            col_getter=lambda d: d["task_totals"],
+        )
+        # Table 2: same agent-wise layout, Check Type as columns instead (flattened
+        # across all task types per agent) — same Total/Err/Case+, different bifurcation.
+        check_table = build_agent_col_table(
+            active, tot_done, tot_err, tot_case, show_case_addition,
+            col_getter=agent_check_totals,
+        )
 
-        name_w = max([len("Agent")] + [len(n) for n, _ in active] + [len("TEAM TOTAL")]) + 2
-        col_w = {a: max(len(a), 5) + 2 for a in task_cols}
-        done_w = max(len("Total"), len(str(tot_done))) + 2
-        err_w = max(len("Err"), len(str(tot_err))) + 2
-        case_w = max(len("Case+"), len(str(tot_case))) + 2 if show_case_addition else 0
-
-        header = "Agent".ljust(name_w)
-        for a in task_cols:
-            header += a.rjust(col_w[a])
-        header += "Total".rjust(done_w) + "Err".rjust(err_w)
-        if show_case_addition:
-            header += "Case+".rjust(case_w)
-        sep = "-" * len(header)
-
-        table_lines = [header, sep]
-        for name, d in active:
-            row = name.ljust(name_w)
-            for a in task_cols:
-                v = d["task_totals"].get(a, 0)
-                row += (str(v) if v else "-").rjust(col_w[a])
-            row += str(d["completed_total"]).rjust(done_w) + str(d["error_total"]).rjust(err_w)
-            if show_case_addition:
-                row += str(d["case_add_total"]).rjust(case_w)
-            table_lines.append(row)
-        table_lines.append(sep)
-
-        total_row = "TEAM TOTAL".ljust(name_w)
-        for a in task_cols:
-            total_row += str(task_col_totals[a]).rjust(col_w[a])
-        total_row += str(tot_done).rjust(done_w) + str(tot_err).rjust(err_w)
-        if show_case_addition:
-            total_row += str(tot_case).rjust(case_w)
-        table_lines.append(total_row)
-
-        main_lines = ["```\n" + "\n".join(table_lines) + "\n```"]
-
-        # Team-level aggregates — by Task Type and by Check Type (across all agents),
-        # matching the "Ops Cases Bot" report style. Simple 2-column tables, no thread.
-        task_type_totals = defaultdict(int)
-        check_type_totals = defaultdict(int)
-        for _, d in active:
-            for abbr, cnt in d["task_totals"].items():
-                task_type_totals[d["task_labels"].get(abbr, abbr)] += cnt
-            for checks in d["task_check"].values():
-                for check_label, cnt in checks.items():
-                    check_type_totals[check_label] += cnt
-
-        by_task = build_two_col_table("By Task Type", task_type_totals, "Task Type")
-        by_check = build_two_col_table("By Check Type", check_type_totals, "Check Type")
-        if by_task:
-            main_lines.append(by_task)
-        if by_check:
-            main_lines.append(by_check)
+        main_lines = [
+            "*By Task Type*\n```\n" + task_table + "\n```",
+            "*By Check Type*\n```\n" + check_table + "\n```",
+        ]
 
     lines = main_lines
     if idle_names:
