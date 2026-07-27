@@ -388,7 +388,6 @@ def format_category_section(label, members, agent_data):
         return (text + (f"\n{tag_line}" if tag_line else "")), 0, 0, 0
 
     token_index = build_token_index(agent_data)
-    active_lines = []
     idle_names = []
     unmatched = []
 
@@ -407,6 +406,7 @@ def format_category_section(label, members, agent_data):
     # constant "Case Addition: 0" on every line is pure noise for them.
     show_case_addition = any(case_add > 0 for *_, case_add in matched_rows)
 
+    active_rows = []
     tot_done = tot_err = tot_case = 0
     for name, combos, done, err, case_add in matched_rows:
         tot_done += done
@@ -415,33 +415,46 @@ def format_category_section(label, members, agent_data):
         if done == 0 and err == 0 and case_add == 0:
             idle_names.append(name)
             continue
-        # Cap the per-agent breakdown — some agents touch a dozen+ distinct Task+Check
-        # combos in a day, and listing all of them for everyone is what made messages
-        # long enough for Slack to split them mid-sentence. Top 3 covers the shape of
-        # where their day went; the exact figures are still in the source Redash query.
-        sorted_combos = sorted(combos.items(), key=lambda kv: kv[1], reverse=True)
-        shown = [c for c in sorted_combos if c[1] > 0][:3]
-        combo_bits = ", ".join(f"{c}: {v}" for c, v in shown)
-        remaining = len([c for c in sorted_combos if c[1] > 0]) - len(shown)
-        if remaining > 0:
-            combo_bits += f", +{remaining} more"
-        line = f"• *{name}* — Completed: *{done}* · Errors: *{err}*"
-        if show_case_addition:
-            line += f" · Case Addition: *{case_add}*"
-        if combo_bits:
-            line += f"\n     ↳ {combo_bits}"
-        active_lines.append(line)
+        combo_bits = ", ".join(
+            f"{c}: {v}" for c, v in sorted(combos.items(), key=lambda kv: kv[1], reverse=True) if v > 0
+        )
+        active_rows.append((name, done, err, case_add, combo_bits))
 
-    lines = [f"*{label}*"]
-    lines.extend(active_lines if active_lines else ["_No activity today._"])
+    if active_rows:
+        name_w = max([len("Agent")] + [len(r[0]) for r in active_rows] + [len("TEAM TOTAL")]) + 2
+        done_w = max([len("Completed")] + [len(str(r[1])) for r in active_rows] + [len(str(tot_done))]) + 2
+        err_w = max([len("Errors")] + [len(str(r[2])) for r in active_rows] + [len(str(tot_err))]) + 2
+        case_w = (max([len("Case Addn")] + [len(str(r[3])) for r in active_rows] + [len(str(tot_case))]) + 2
+                  if show_case_addition else 0)
+
+        header = "Agent".ljust(name_w) + "Completed".rjust(done_w) + "Errors".rjust(err_w)
+        if show_case_addition:
+            header += "Case Addn".rjust(case_w)
+        sep = "-" * len(header)
+
+        table_lines = [header, sep]
+        for name, done, err, case_add, combo_bits in active_rows:
+            row = name.ljust(name_w) + str(done).rjust(done_w) + str(err).rjust(err_w)
+            if show_case_addition:
+                row += str(case_add).rjust(case_w)
+            table_lines.append(row)
+            if combo_bits:
+                table_lines.append(f"   {combo_bits}")
+        table_lines.append(sep)
+        total_row = "TEAM TOTAL".ljust(name_w) + str(tot_done).rjust(done_w) + str(tot_err).rjust(err_w)
+        if show_case_addition:
+            total_row += str(tot_case).rjust(case_w)
+        table_lines.append(total_row)
+
+        table_block = "```\n" + "\n".join(table_lines) + "\n```"
+    else:
+        table_block = "_No activity today._"
+
+    lines = [table_block]
     if idle_names:
         lines.append(f"_No activity: {', '.join(idle_names)}_")
     if unmatched:
         lines.append(f"_No data found for: {', '.join(unmatched)}_")
-    total_line = f"*Team Total* — Completed: *{tot_done}* · Errors: *{tot_err}*"
-    if show_case_addition:
-        total_line += f" · Case Addition: *{tot_case}*"
-    lines.append(total_line)
     if tag_line:
         lines.append(tag_line)
 
