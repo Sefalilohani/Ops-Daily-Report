@@ -9,10 +9,14 @@ on:
         description: 'Override date to report on (YYYY-MM-DD). Leave blank for "yesterday" (IST).'
         required: false
         default: ''
-      test_channel_id:
-        description: 'Test only: redirect ALL channel posts to this Slack channel ID instead of the real routing.'
+      test_channel:
+        description: 'Test only: redirect ALL channel posts here instead of the real routing. Leave as "none" for production.'
         required: false
-        default: ''
+        type: choice
+        options:
+          - none
+          - testing-sefali
+        default: none
 
 jobs:
   send-report:
@@ -33,5 +37,5 @@ jobs:
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           REPORT_DATE: ${{ github.event.inputs.report_date }}
-          TEST_CHANNEL_ID: ${{ github.event.inputs.test_channel_id }}
+          TEST_CHANNEL: ${{ github.event.inputs.test_channel }}
         run: python report.py

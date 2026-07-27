@@ -18,9 +18,15 @@ REDASH_API_KEY = "CWcvNsz8fkzifFJPD6r7kc2T6TCU6pbhxa0z0nRm"
 IST = timezone(timedelta(hours=5, minutes=30))
 
 REPORT_DATE = os.environ.get("REPORT_DATE", "").strip()
-# When set, every channel's message is redirected here instead (with a marker showing
-# the real destination) — for test runs without touching the real CHANNELS routing.
-TEST_CHANNEL_ID = os.environ.get("TEST_CHANNEL_ID", "").strip()
+
+# When set (via a dropdown choice, not free text — Slack channel IDs are case-sensitive
+# and free-text GitHub Actions inputs have been getting mangled by something upstream),
+# every channel's message is redirected here instead — for test runs without touching
+# the real CHANNELS routing.
+TEST_CHANNEL_ALIASES = {
+    "testing-sefali": "C0AGRE19V6U",
+}
+TEST_CHANNEL_ID = TEST_CHANNEL_ALIASES.get(os.environ.get("TEST_CHANNEL", "").strip(), "")
 
 # ── CHANNEL / TEAM CONFIG ──────────────────────────────────────
 # Each channel gets ONE Slack message containing one table per category.
