@@ -132,6 +132,22 @@ CHANNELS = [
     },
 ]
 
+# Each category's Slack user group (for @-mention) and lead (for direct @-mention).
+# IDs resolved from the workspace directly, not typed as free text (Slack IDs are
+# case-sensitive and this environment's text fields have been auto-mangling case).
+CATEGORY_TAGS = {
+    "CA + Initiation":    {"usergroup": "S046ESUQLS1", "lead": "U017K6KQT2A"},  # opsinitiation, Thanveer
+    "Grading":            {"usergroup": "S0BKVL7E0SH", "lead": "UN1E2L4G0"},    # opsgrading, Selva
+    "Followups":          {"usergroup": "S08VARCA849", "lead": "UURRMS3MG"},    # opsfollowups, Shalini
+    "QC":                 {"usergroup": "S046WGXTBED", "lead": "U03BUG17X54"},  # opsqc, Ramya
+    "Email Clearance":    {"usergroup": "S0BKX213HFG", "lead": "U03BUG17X54"},  # opsemailtriage, Ramya
+    "MISC":               {"usergroup": "S04K6P0CYES", "lead": "U017K6KQT2A"},  # opsmisc, Thanveer
+    "Payment Settlement": {"usergroup": "S0BKZ13RE82", "lead": "U017K6KQT2A"},  # paymentsettlement, Thanveer
+    "Case Addition":      {"usergroup": "S05BY1H4HJ5", "lead": "UURRMS3MG"},    # opscaseaddition, Shalini
+    "Research":           {"usergroup": "S0BLTALCZA4", "lead": "UN1E2L4G0"},    # opsresearch, Selva
+    "Reference":          {"usergroup": "S086WH7H6A0", "lead": "UN1E2L4G0"},    # opsreference, Selva
+}
+
 # Known name prefixes agents' Redash display names carry (e.g. "C A Manash Kashyap").
 # Stripped for matching so members can be listed with or without the prefix.
 NAME_PREFIXES = [
@@ -357,81 +373,81 @@ def match_member(member, agent_data, token_index):
 
 
 # ── FORMAT SLACK MESSAGE ────────────────────────────────────────
+# Compact, bullet-style per agent (not a wide table — a table with one column per
+# distinct Task+Check combo got so wide/long it caused Slack to fragment the message
+# across several separate posts). Each agent's own combos are listed inline instead,
+# so length scales with what that agent actually did, not the union across everyone.
 
-def format_category_table(label, members, agent_data):
+def format_category_section(label, members, agent_data):
+    """Returns (section_text, completed_total, error_total, case_add_total)."""
+    tag = CATEGORY_TAGS.get(label)
+    tag_line = f"cc: <!subteam^{tag['usergroup']}> <@{tag['lead']}>" if tag else ""
+
     if not members:
-        return f"*{label}*\n_No members configured yet._"
+        text = f"*{label}*\n_No members configured yet._"
+        return (text + (f"\n{tag_line}" if tag_line else "")), 0, 0, 0
 
     token_index = build_token_index(agent_data)
-    rows = []
+    active_lines = []
+    idle_names = []
     unmatched = []
-    fuzzy_matches = []
-    combo_cols = []
-    seen_combos = set()
 
+    matched_rows = []
     for member in members:
-        d, was_fuzzy = match_member(member, agent_data, token_index)
+        d, _was_fuzzy = match_member(member, agent_data, token_index)
         if d is None:
             unmatched.append(member)
-            rows.append((member, {}, 0, 0, 0))
             continue
-        if was_fuzzy:
-            fuzzy_matches.append(f"{member} → {d['display_name']}")
-        for combo in d["combos"]:
-            if combo not in seen_combos and d["combos"][combo] > 0:
-                seen_combos.add(combo)
-                combo_cols.append(combo)
-        rows.append((d["display_name"] or member, d["combos"], d["completed_total"], d["error_total"], d["case_add_total"]))
+        matched_rows.append((d["display_name"] or member, d["combos"], d["completed_total"], d["error_total"], d["case_add_total"]))
 
-    combo_cols.sort()
-    rows.sort(key=lambda r: r[2], reverse=True)
+    matched_rows.sort(key=lambda r: r[2], reverse=True)
 
-    name_w = max([len("Agent")] + [len(r[0]) for r in rows]) + 1
-    combo_w = {c: max(len(c), 6) + 1 for c in combo_cols}
-
-    header = "Agent".ljust(name_w)
-    for c in combo_cols:
-        header += c.rjust(combo_w[c])
-    header += "Done".rjust(7) + "Err".rjust(6) + "Case+".rjust(8)
-
-    lines = [header, "-" * len(header)]
     tot_done = tot_err = tot_case = 0
-    tot_combo = defaultdict(int)
-
-    for name, combos, done, err, case_add in rows:
-        line = name.ljust(name_w)
-        for c in combo_cols:
-            v = combos.get(c, 0)
-            line += (str(v) if v else "-").rjust(combo_w[c])
-            tot_combo[c] += v
-        line += str(done).rjust(7) + str(err).rjust(6) + str(case_add).rjust(8)
-        lines.append(line)
+    for name, combos, done, err, case_add in matched_rows:
         tot_done += done
         tot_err += err
         tot_case += case_add
+        if done == 0 and err == 0 and case_add == 0:
+            idle_names.append(name)
+            continue
+        combo_bits = ", ".join(f"{c}: {v}" for c, v in sorted(combos.items()) if v > 0)
+        line = f"• *{name}* — Completed: *{done}* · Errors: *{err}* · Case+: *{case_add}*"
+        if combo_bits:
+            line += f"\n     ↳ {combo_bits}"
+        active_lines.append(line)
 
-    totals_line = "TOTAL".ljust(name_w)
-    for c in combo_cols:
-        totals_line += str(tot_combo[c]).rjust(combo_w[c])
-    totals_line += str(tot_done).rjust(7) + str(tot_err).rjust(6) + str(tot_case).rjust(8)
-    lines.append("-" * len(header))
-    lines.append(totals_line)
-
-    table = "```\n" + "\n".join(lines) + "\n```"
-    section = f"*{label}*\n{table}"
+    lines = [f"*{label}*"]
+    lines.extend(active_lines if active_lines else ["_No activity today._"])
+    if idle_names:
+        lines.append(f"_No activity: {', '.join(idle_names)}_")
     if unmatched:
-        section += f"\n_No data found for: {', '.join(unmatched)}_"
-    if fuzzy_matches:
-        section += f"\n_Matched via name variant: {'; '.join(fuzzy_matches)}_"
-    return section
+        lines.append(f"_No data found for: {', '.join(unmatched)}_")
+    lines.append(f"*Team Total* — Completed: *{tot_done}* · Errors: *{tot_err}* · Case+: *{tot_case}*")
+    if tag_line:
+        lines.append(tag_line)
+
+    return "\n".join(lines), tot_done, tot_err, tot_case
 
 
 def format_channel_message(channel_cfg, date_label, agent_data):
     categories = channel_cfg["categories"]
     report_name = " + ".join(c["label"] for c in categories) + " Team Daily Task Report"
     header = f"\U0001f4ca *{report_name} — {date_label}*"
-    sections = [format_category_table(c["label"], c["members"], agent_data) for c in categories]
-    return "\n\n".join([header] + sections)
+
+    sections = []
+    grand_done = grand_err = grand_case = 0
+    for c in categories:
+        text, done, err, case_add = format_category_section(c["label"], c["members"], agent_data)
+        sections.append(text)
+        grand_done += done
+        grand_err += err
+        grand_case += case_add
+
+    parts = [header] + sections
+    if len(categories) > 1:
+        parts.append(f":bar_chart: *Channel Grand Total* — Completed: *{grand_done}* · Errors: *{grand_err}* · Case+: *{grand_case}*")
+
+    return "\n\n".join(parts)
 
 
 # ── SLACK AUTH ───────────────────────────────────────────────────
