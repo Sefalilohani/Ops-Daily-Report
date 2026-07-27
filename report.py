@@ -469,13 +469,19 @@ def build_agent_col_table(active, tot_done, tot_err, tot_case, show_case_additio
 
 
 def format_category_section(label, members, agent_data):
-    """Returns (main_text, completed_total, error_total, case_add_total)."""
+    """
+    Returns (list_of_message_bodies, completed_total, error_total, case_add_total).
+    A category can span two Slack messages — Task Type table, then Check Type table —
+    since combining both in one message got long enough (teams like QC/MISC have up
+    to 12 Check Type columns) to hit this workspace's apparent per-message length
+    limit. Posting them separately keeps each one self-contained and well under it.
+    """
     tag = CATEGORY_TAGS.get(label)
     tag_line = f"cc: <!subteam^{tag['usergroup']}> <@{tag['lead']}>" if tag else ""
 
     if not members:
         text = f"*{label}*\n_No members configured yet._"
-        return (text + (f"\n{tag_line}" if tag_line else "")), 0, 0, 0
+        return [text + (f"\n{tag_line}" if tag_line else "")], 0, 0, 0
 
     token_index = build_token_index(agent_data)
     idle_names = []
@@ -508,34 +514,37 @@ def format_category_section(label, members, agent_data):
         active.append((name, d))
 
     if not active:
-        main_lines = ["_No activity today._"]
-    else:
-        # Table 1: agent-wise, Task Type as columns.
-        task_table = build_agent_col_table(
-            active, tot_done, tot_err, tot_case, show_case_addition,
-            col_getter=lambda d: d["task_totals"],
-        )
-        # Table 2: same agent-wise layout, Check Type as columns instead (flattened
-        # across all task types per agent) — same Total/Err/Case+, different bifurcation.
-        check_table = build_agent_col_table(
-            active, tot_done, tot_err, tot_case, show_case_addition,
-            col_getter=agent_check_totals,
-        )
+        body = "_No activity today._"
+        if idle_names:
+            body += f"\n_No activity: {', '.join(idle_names)}_"
+        if unmatched:
+            body += f"\n_No data found for: {', '.join(unmatched)}_"
+        if tag_line:
+            body += f"\n{tag_line}"
+        return [body], tot_done, tot_err, tot_case
 
-        main_lines = [
-            "*By Task Type*\n```\n" + task_table + "\n```",
-            "*By Check Type*\n```\n" + check_table + "\n```",
-        ]
-
-    lines = main_lines
+    # Table 1: agent-wise, Task Type as columns.
+    task_table = build_agent_col_table(
+        active, tot_done, tot_err, tot_case, show_case_addition,
+        col_getter=lambda d: d["task_totals"],
+    )
+    msg1 = "*By Task Type*\n```\n" + task_table + "\n```"
     if idle_names:
-        lines.append(f"_No activity: {', '.join(idle_names)}_")
+        msg1 += f"\n_No activity: {', '.join(idle_names)}_"
     if unmatched:
-        lines.append(f"_No data found for: {', '.join(unmatched)}_")
-    if tag_line:
-        lines.append(tag_line)
+        msg1 += f"\n_No data found for: {', '.join(unmatched)}_"
 
-    return "\n".join(lines), tot_done, tot_err, tot_case
+    # Table 2: same agent-wise layout, Check Type as columns instead (flattened
+    # across all task types per agent) — same Total/Err/Case+, different bifurcation.
+    check_table = build_agent_col_table(
+        active, tot_done, tot_err, tot_case, show_case_addition,
+        col_getter=agent_check_totals,
+    )
+    msg2 = "*By Check Type*\n```\n" + check_table + "\n```"
+    if tag_line:
+        msg2 += f"\n{tag_line}"
+
+    return [msg1, msg2], tot_done, tot_err, tot_case
 
 
 def format_channel_messages(channel_cfg, date_label, agent_data):
@@ -554,9 +563,10 @@ def format_channel_messages(channel_cfg, date_label, agent_data):
     messages = []
     grand_done = grand_err = grand_case = 0
     for c in categories:
-        text, done, err, case_add = format_category_section(c["label"], c["members"], agent_data)
+        bodies, done, err, case_add = format_category_section(c["label"], c["members"], agent_data)
         header = f"\U0001f4ca *{c['label']} Team Daily Task Report — {date_label}*"
-        messages.append(f"{header}\n\n{text}")
+        messages.append(f"{header}\n\n{bodies[0]}")
+        messages.extend(bodies[1:])
         grand_done += done
         grand_err += err
         grand_case += case_add
@@ -590,17 +600,29 @@ MAX_MESSAGE_CHARS = 3500  # conservative — this workspace has been observed fr
 
 
 def chunk_message(text, max_len=MAX_MESSAGE_CHARS):
-    """Split text into pieces on line boundaries, never mid-line, each under max_len."""
+    """
+    Split text into pieces on line boundaries, never mid-line, each under max_len.
+    Fence-aware: if a split lands inside a ``` code block, closes it at the end of
+    the outgoing chunk and reopens it at the start of the next, so a forced split
+    never leaves a chunk with an unbalanced/broken code block.
+    """
     if len(text) <= max_len:
         return [text]
     chunks, current = [], ""
+    in_code_block = False
     for line in text.split("\n"):
         candidate = f"{current}\n{line}" if current else line
         if len(candidate) > max_len and current:
-            chunks.append(current)
-            current = line
+            if in_code_block:
+                chunks.append(current + "\n```")
+                current = "```\n" + line
+            else:
+                chunks.append(current)
+                current = line
         else:
             current = candidate
+        if line.strip() == "```":
+            in_code_block = not in_code_block
     if current:
         chunks.append(current)
     return chunks
