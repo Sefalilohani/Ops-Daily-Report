@@ -2,7 +2,7 @@ name: CA + Initiation Daily Task Report
 
 on:
   schedule:
-    - cron: '0 3 * * *'   # 8:30 AM IST
+    - cron: '0 1 * * *'   # 6:30 AM IST
   workflow_dispatch:
     inputs:
       report_date:
