@@ -429,20 +429,24 @@ def format_channel_message(channel_cfg, date_label, agent_data):
 
 
 # ── SLACK AUTH ───────────────────────────────────────────────────
-# GitHub Secrets have, in the past, silently lowercased part of this token when it
-# was saved (see Error-report repo) — a fixed reconstruction formula corrects that.
-# But that corruption doesn't always happen (depends on how/where the value was
-# copied from), so we can't assume it blindly: try the reconstructed token first,
-# fall back to the raw secret as-is, and fail loudly with diagnostics if neither works.
+# GitHub Secrets have, in the past, corrupted this token in different ways depending
+# on how/where it was pasted from (e.g. Error-report's secret got its suffix
+# lowercased; this repo's got its literal "xoxb-" prefix auto-capitalized to "Xoxb-").
+# Rather than assume one specific corruption, try several corrections and fall back
+# to the raw value, verifying each with a real auth.test call.
 
 def resolve_slack_token():
     global SLACK_TOKEN
+    raw = _raw_token
     candidates = []
-    if len(_raw_token) >= 31:
-        candidates.append(("reconstructed", "xoxb" + _raw_token[4:31] + "bFqMGfkmHBzvLRtU1It2ptnt"))
-    candidates.append(("raw", _raw_token))
 
-    print(f"SLACK_BOT_TOKEN as received: length={len(_raw_token)}, starts='{_raw_token[:6]}', ends='{_raw_token[-6:]}'")
+    if raw[:5].lower() == "xoxb-" and raw[:5] != "xoxb-":
+        candidates.append(("prefix-case-fixed", "xoxb-" + raw[5:]))
+    candidates.append(("raw", raw))
+    if len(raw) >= 31:
+        candidates.append(("legacy-suffix-reconstructed", "xoxb" + raw[4:31] + "bFqMGfkmHBzvLRtU1It2ptnt"))
+
+    print(f"SLACK_BOT_TOKEN as received: length={len(raw)}, starts='{raw[:6]}', ends='{raw[-6:]}'")
 
     for label, token in candidates:
         r = requests.post("https://slack.com/api/auth.test", headers={"Authorization": f"Bearer {token}"}, timeout=15)
@@ -452,7 +456,7 @@ def resolve_slack_token():
             SLACK_TOKEN = token
             print(f"  Using {label} token (bot: {data.get('user')}, team: {data.get('team')})")
             return
-    raise Exception("No working Slack token — both the reconstructed and raw SLACK_BOT_TOKEN failed auth.test. Re-check the secret value.")
+    raise Exception("No working Slack token — none of the corrected/raw SLACK_BOT_TOKEN variants passed auth.test. Re-check the secret value.")
 
 
 # ── POST TO SLACK ────────────────────────────────────────────────
