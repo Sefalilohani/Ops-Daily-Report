@@ -3,6 +3,7 @@ import time
 import requests
 from datetime import datetime, timezone, timedelta
 from collections import defaultdict
+from itertools import permutations
 
 # ── CONFIG ─────────────────────────────────────────────────────
 
@@ -403,6 +404,26 @@ def build_token_index(agent_data):
     return [(key, name_tokens(key)) for key in agent_data]
 
 
+def _token_compat(t1, t2):
+    """Two tokens are compatible if equal, or one is a single-letter initial of the other
+    (e.g. 'k' vs 'krishnan') — SpringVerify abbreviates some surnames to an initial in
+    Redash's display name (e.g. roster's 'Priyanka Krishnan' shows there as 'Priyanka K')."""
+    return t1 == t2 or (len(t1) == 1 and t2.startswith(t1)) or (len(t2) == 1 and t1.startswith(t2))
+
+
+def _names_compatible(tokens_a, tokens_b):
+    if tokens_a == tokens_b or tokens_a <= tokens_b or tokens_b <= tokens_a:
+        return True
+    # Same token count, different content — check for an abbreviation-tolerant pairing
+    # (e.g. {priyanka, krishnan} vs {priyanka, k}), not just a same/subset match.
+    if len(tokens_a) != len(tokens_b):
+        return False
+    return any(
+        all(_token_compat(x, y) for x, y in zip(tokens_a, perm))
+        for perm in permutations(tokens_b)
+    )
+
+
 def match_member(member, agent_data, token_index):
     """Returns (data_dict_or_None, was_fuzzy_match)."""
     key = clean_name(member)
@@ -420,7 +441,7 @@ def match_member(member, agent_data, token_index):
     # "two different real people who share a first+last name").
     candidates = [
         (k, t) for k, t in token_index
-        if t and (member_tokens <= t or t <= member_tokens) and k not in EXPLICIT_MEMBER_KEYS
+        if t and _names_compatible(member_tokens, t) and k not in EXPLICIT_MEMBER_KEYS
     ]
     if not candidates:
         return None, False
