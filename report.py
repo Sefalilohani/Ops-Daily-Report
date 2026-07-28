@@ -232,13 +232,16 @@ def fmt_date(dt):
 
 
 # ── FETCH REDASH DATA ──────────────────────────────────────────
-# tasks.task_completed_at / errors.created_at / candidate_logs.created_at are all
-# stored in true UTC (verified NOW() = UTC_TIMESTAMP() on this data source). To get
-# a clean IST calendar day we must shift the boundary by -5:30, NOT compare against
-# naive 00:00:00/23:59:59 strings (that's an ~5.5h-shifted bug seen in other reports).
+# Deliberately matches Redash query 3045's logic (confirmed as the team's intended
+# behavior): a "day" is the raw UTC calendar day, NOT an IST-midnight-to-midnight day.
+# The standard shift is 9 AM-7 PM IST, which sits well inside this window either way;
+# for the few agents who occasionally run late into the early hours, the raw-UTC-day
+# cutover falls at 5:30 AM IST (a naturally quiet time) instead of at IST midnight —
+# so one continuous overnight shift stays together in a single day's report instead
+# of being split across two days' reports.
 
 def ist_day_utc_bounds(target_date_ist):
-    start_utc = target_date_ist.astimezone(timezone.utc)
+    start_utc = datetime(target_date_ist.year, target_date_ist.month, target_date_ist.day, tzinfo=timezone.utc)
     end_utc = start_utc + timedelta(days=1)
     return start_utc.strftime("%Y-%m-%d %H:%M:%S"), end_utc.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -683,7 +686,7 @@ def run_report():
 
     date_label = fmt_date(target_date)
     start_utc, end_utc = ist_day_utc_bounds(target_date)
-    print(f"Reporting on IST day: {date_label}  (UTC window {start_utc} -> {end_utc})")
+    print(f"Reporting on: {date_label}  (raw UTC calendar-day window {start_utc} -> {end_utc}, matches Redash Q3045)")
 
     print("Fetching Redash data...")
     completed_rows = fetch_completed(start_utc, end_utc)
