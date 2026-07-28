@@ -202,6 +202,18 @@ def name_tokens(name):
     return frozenset(t for t in "".join(c if c.isalpha() or c == " " else " " for c in cleaned).split() if t)
 
 
+# Every explicitly-configured member name, across every category — used to stop fuzzy
+# matching from "poaching" a Redash record that's actually someone else's exact name.
+# (e.g. QC's "Shivam Kumar" got wrongly fuzzy-matched as MISC's "Shivam Kumar Jha" since
+# {shivam,kumar} is a token-subset of {shivam,kumar,jha} — but they're different people.)
+EXPLICIT_MEMBER_KEYS = {
+    clean_name(m)
+    for channel in CHANNELS
+    for category in channel["categories"]
+    for m in category["members"]
+}
+
+
 def humanize(enum_value):
     if not enum_value or enum_value == "N/A":
         return "N/A"
@@ -401,7 +413,15 @@ def match_member(member, agent_data, token_index):
     if not member_tokens:
         return None, False
 
-    candidates = [(k, t) for k, t in token_index if t and (member_tokens <= t or t <= member_tokens)]
+    # Exclude any candidate whose key is literally someone ELSE's exact configured
+    # name (e.g. QC's "Shivam Kumar" must never be fuzzy-claimed as a match for
+    # MISC's "Shivam Kumar Jha" just because one name's tokens are a subset of the
+    # other's — token overlap alone can't tell "missing a middle name" apart from
+    # "two different real people who share a first+last name").
+    candidates = [
+        (k, t) for k, t in token_index
+        if t and (member_tokens <= t or t <= member_tokens) and k not in EXPLICIT_MEMBER_KEYS
+    ]
     if not candidates:
         return None, False
     candidates.sort(key=lambda c: len(c[1] & member_tokens), reverse=True)
