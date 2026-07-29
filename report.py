@@ -312,14 +312,31 @@ def fetch_errors(start_utc, end_utc):
 
 
 def fetch_case_additions(start_utc, end_utc):
+    # Two distinct scenarios both count as "case addition" work, confirmed against real
+    # examples (Manas: 27 -> 30, target 31; Ankita unaffected, a separate unresolved gap):
+    #   1. Direct/proxy CANDIDATE_CONSENT_ADDED — the original, already-correct source.
+    #   2. "Added by the client (or CA), but done via an SA agent acting as proxy" — this
+    #      shows up as a CANDIDATE_BASIC_INFO_UPDATED event with proxy_user_id_fk set to
+    #      the SA agent, NOT as a CANDIDATE_CONSENT_ADDED event, so the original query
+    #      alone misses it entirely (e.g. Adani candidates 477179/477182).
+    # UNION (not UNION ALL) dedupes a candidate credited to the same agent via both paths.
     sql = f"""
-        SELECT u.name AS "Agent Name", COUNT(DISTINCT cl.candidate_id_fk) AS "Total Count"
-        FROM candidate_logs cl
-        JOIN users u ON u.id = COALESCE(cl.proxy_user_id_fk, cl.user_id_fk)
-        JOIN company_candidate_mapping ccm ON ccm.candidate_id = cl.candidate_id_fk AND ccm.deleted_at IS NULL
-        WHERE cl.type = 'CANDIDATE_CONSENT_ADDED' AND cl.deleted_at IS NULL
-          AND ((cl.user_type=1 AND cl.proxy_user_id_fk IS NULL) OR (cl.user_type=2 AND cl.proxy_user_id_fk IS NOT NULL))
-          AND cl.created_at >= '{start_utc}' AND cl.created_at < '{end_utc}'
+        SELECT u.name AS "Agent Name", COUNT(DISTINCT combined.candidate_id_fk) AS "Total Count"
+        FROM (
+            SELECT COALESCE(cl.proxy_user_id_fk, cl.user_id_fk) AS agent_user_id, cl.candidate_id_fk
+            FROM candidate_logs cl
+            WHERE cl.type = 'CANDIDATE_CONSENT_ADDED' AND cl.deleted_at IS NULL
+              AND ((cl.user_type=1 AND cl.proxy_user_id_fk IS NULL) OR (cl.user_type=2 AND cl.proxy_user_id_fk IS NOT NULL))
+              AND cl.created_at >= '{start_utc}' AND cl.created_at < '{end_utc}'
+            UNION
+            SELECT cl.proxy_user_id_fk AS agent_user_id, cl.candidate_id_fk
+            FROM candidate_logs cl
+            WHERE cl.type = 'CANDIDATE_BASIC_INFO_UPDATED' AND cl.deleted_at IS NULL
+              AND cl.user_type = 2 AND cl.proxy_user_id_fk IS NOT NULL
+              AND cl.created_at >= '{start_utc}' AND cl.created_at < '{end_utc}'
+        ) combined
+        JOIN users u ON u.id = combined.agent_user_id
+        JOIN company_candidate_mapping ccm ON ccm.candidate_id = combined.candidate_id_fk AND ccm.deleted_at IS NULL
         GROUP BY u.name
         ORDER BY u.name
     """
