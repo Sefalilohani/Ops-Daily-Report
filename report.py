@@ -312,31 +312,82 @@ def fetch_errors(start_utc, end_utc):
 
 
 def fetch_case_additions(start_utc, end_utc):
-    # Two distinct scenarios both count as "case addition" work, confirmed against real
-    # examples (Manas: 27 -> 30, target 31; Ankita unaffected, a separate unresolved gap):
-    #   1. Direct/proxy CANDIDATE_CONSENT_ADDED — the original, already-correct source.
-    #   2. "Added by the client (or CA), but done via an SA agent acting as proxy" — this
-    #      shows up as a CANDIDATE_BASIC_INFO_UPDATED event with proxy_user_id_fk set to
-    #      the SA agent, NOT as a CANDIDATE_CONSENT_ADDED event, so the original query
-    #      alone misses it entirely (e.g. Adani candidates 477179/477182).
-    # UNION (not UNION ALL) dedupes a candidate credited to the same agent via both paths.
+    # 4-way, non-overlapping breakdown of case-addition work, matching Redash query 1997.
+    # The "who filled the form" signal comes from company_candidate_mapping.form_filled_by /
+    # form_filled_by_user_id / proxy_user_id — the same data the SV admin UI's Verification
+    # Details -> Form Status section shows — not just candidate_logs, which misses cases
+    # where one agent adds the candidate and a different agent fills the form.
+    #   1. Added & Filled     — same agent both added (directly) and filled the form.
+    #   2. Added, Not Filled  — agent added (directly) but the form is still unfilled.
+    #   3. Filled Only        — a different agent (or no logged adder) filled the form.
+    #   4. Proxy Added        — agent added the candidate as proxy via the CA portal.
+    # The 30-day lookback lets an add and a later fill (or vice versa) be matched even
+    # when they land on different days, while staying sargable on created_at.
     sql = f"""
-        SELECT u.name AS "Agent Name", COUNT(DISTINCT combined.candidate_id_fk) AS "Total Count"
-        FROM (
-            SELECT COALESCE(cl.proxy_user_id_fk, cl.user_id_fk) AS agent_user_id, cl.candidate_id_fk
+        WITH add_events AS (
+            SELECT
+                cl.candidate_id_fk,
+                CASE WHEN cl.user_type = 1 THEN cl.user_id_fk ELSE cl.proxy_user_id_fk END AS adder_user_id,
+                CASE WHEN cl.user_type = 1 THEN 'DIRECT' ELSE 'PROXY' END AS adder_type,
+                cl.created_at AS add_at,
+                ROW_NUMBER() OVER (PARTITION BY cl.candidate_id_fk ORDER BY cl.created_at ASC) AS rn
             FROM candidate_logs cl
             WHERE cl.type = 'CANDIDATE_CONSENT_ADDED' AND cl.deleted_at IS NULL
-              AND ((cl.user_type=1 AND cl.proxy_user_id_fk IS NULL) OR (cl.user_type=2 AND cl.proxy_user_id_fk IS NOT NULL))
-              AND cl.created_at >= '{start_utc}' AND cl.created_at < '{end_utc}'
+              AND ((cl.user_type = 1 AND cl.user_id_fk IS NOT NULL)
+                OR (cl.user_type = 2 AND cl.proxy_user_id_fk IS NOT NULL))
+              AND cl.created_at >= DATE_SUB('{start_utc}', INTERVAL 30 DAY)
+              AND cl.created_at < '{end_utc}'
+        ),
+        canonical_add AS (
+            SELECT candidate_id_fk, adder_user_id, adder_type, add_at FROM add_events WHERE rn = 1
+        ),
+        fills AS (
+            SELECT
+                ccm.candidate_id, ccm.form_filled,
+                CASE WHEN ccm.form_filled_by = 1 THEN ccm.form_filled_by_user_id
+                     WHEN ccm.form_filled_by = 3 THEN ccm.proxy_user_id
+                     ELSE NULL END AS filler_user_id
+            FROM company_candidate_mapping ccm
+            WHERE ccm.deleted_at IS NULL
+              AND ccm.created_at >= DATE_SUB('{start_utc}', INTERVAL 30 DAY)
+              AND ccm.created_at < '{end_utc}'
+        ),
+        combined AS (
+            SELECT ca.candidate_id_fk, ca.adder_user_id, ca.adder_type, ca.add_at, f.form_filled, f.filler_user_id
+            FROM canonical_add ca
+            LEFT JOIN fills f ON f.candidate_id = ca.candidate_id_fk
             UNION
-            SELECT cl.proxy_user_id_fk AS agent_user_id, cl.candidate_id_fk
-            FROM candidate_logs cl
-            WHERE cl.type = 'CANDIDATE_BASIC_INFO_UPDATED' AND cl.deleted_at IS NULL
-              AND cl.user_type = 2 AND cl.proxy_user_id_fk IS NOT NULL
-              AND cl.created_at >= '{start_utc}' AND cl.created_at < '{end_utc}'
-        ) combined
-        JOIN users u ON u.id = combined.agent_user_id
-        JOIN company_candidate_mapping ccm ON ccm.candidate_id = combined.candidate_id_fk AND ccm.deleted_at IS NULL
+            SELECT f.candidate_id AS candidate_id_fk, ca.adder_user_id, ca.adder_type, ca.add_at, f.form_filled, f.filler_user_id
+            FROM fills f
+            LEFT JOIN canonical_add ca ON ca.candidate_id_fk = f.candidate_id
+            WHERE ca.candidate_id_fk IS NULL AND f.filler_user_id IS NOT NULL
+        ),
+        tagged AS (
+            SELECT candidate_id_fk,
+                CASE WHEN adder_type = 'PROXY' THEN adder_user_id END AS b4_user, add_at AS b4_date,
+                CASE WHEN adder_type = 'DIRECT' AND filler_user_id IS NOT NULL AND filler_user_id = adder_user_id THEN adder_user_id END AS b1_user, add_at AS b1_date,
+                CASE WHEN adder_type = 'DIRECT' AND form_filled IS NULL THEN adder_user_id END AS b2_user, add_at AS b2_date,
+                CASE WHEN filler_user_id IS NOT NULL AND filler_user_id <> COALESCE(adder_user_id, -1) THEN filler_user_id END AS b3_user, form_filled AS b3_date
+            FROM combined
+        ),
+        per_agent_candidate AS (
+            SELECT candidate_id_fk, b1_user AS agent_user_id, 1 AS added_and_filled, 0 AS added_not_filled, 0 AS filled_only, 0 AS proxy_added, b1_date AS credit_date FROM tagged WHERE b1_user IS NOT NULL
+            UNION ALL
+            SELECT candidate_id_fk, b2_user, 0, 1, 0, 0, b2_date FROM tagged WHERE b2_user IS NOT NULL
+            UNION ALL
+            SELECT candidate_id_fk, b3_user, 0, 0, 1, 0, b3_date FROM tagged WHERE b3_user IS NOT NULL
+            UNION ALL
+            SELECT candidate_id_fk, b4_user, 0, 0, 0, 1, b4_date FROM tagged WHERE b4_user IS NOT NULL
+        )
+        SELECT
+            u.name AS "Agent Name",
+            SUM(pac.added_and_filled) AS "Added & Filled",
+            SUM(pac.added_not_filled) AS "Added, Not Filled",
+            SUM(pac.filled_only) AS "Filled Only",
+            SUM(pac.proxy_added) AS "Proxy Added"
+        FROM per_agent_candidate pac
+        JOIN users u ON u.id = pac.agent_user_id
+        WHERE pac.credit_date >= '{start_utc}' AND pac.credit_date < '{end_utc}'
         GROUP BY u.name
         ORDER BY u.name
     """
@@ -366,6 +417,8 @@ def build_agent_data(completed_rows, error_rows, case_add_rows):
         "task_labels": {},
         "task_check": defaultdict(lambda: defaultdict(int)),
         "completed_total": 0, "error_total": 0, "case_add_total": 0,
+        "case_add_added_filled": 0, "case_add_added_not_filled": 0,
+        "case_add_filled_only": 0, "case_add_proxy_added": 0,
     })
 
     for row in completed_rows:
@@ -399,10 +452,17 @@ def build_agent_data(completed_rows, error_rows, case_add_rows):
         key = clean_name(raw_name)
         if not key:
             continue
-        count = int(row.get("Total Count") or 0)
+        af = int(row.get("Added & Filled") or 0)
+        anf = int(row.get("Added, Not Filled") or 0)
+        fo = int(row.get("Filled Only") or 0)
+        pa = int(row.get("Proxy Added") or 0)
         d = data[key]
         d["display_name"] = d["display_name"] or raw_name
-        d["case_add_total"] += count
+        d["case_add_added_filled"] += af
+        d["case_add_added_not_filled"] += anf
+        d["case_add_filled_only"] += fo
+        d["case_add_proxy_added"] += pa
+        d["case_add_total"] += af + anf + fo + pa
 
     return data
 
@@ -513,26 +573,44 @@ def agent_check_totals(d):
     return totals
 
 
+CASE_ADD_SUBCOLS = [
+    ("Add&Fill", "case_add_added_filled"),
+    ("AddOnly", "case_add_added_not_filled"),
+    ("FillOnly", "case_add_filled_only"),
+    ("Proxy", "case_add_proxy_added"),
+]
+
+
 def build_agent_col_table(active, tot_done, tot_err, tot_case, show_case_addition, col_getter):
-    """Agent-wise table: rows=agents, columns=whatever col_getter(d) returns, plus Total/Err/Case+."""
+    """Agent-wise table: rows=agents, columns=whatever col_getter(d) returns, plus Total/Err and,
+    when relevant, the 4-way non-overlapping case-addition breakdown (Add&Fill/AddOnly/FillOnly/Proxy)."""
     col_totals = defaultdict(int)
     for _, d in active:
         for col, cnt in col_getter(d).items():
             col_totals[col] += cnt
     cols = sorted(col_totals, key=lambda c: col_totals[c], reverse=True)
 
+    case_totals = {}
+    if show_case_addition:
+        for _, key in CASE_ADD_SUBCOLS:
+            case_totals[key] = sum(d[key] for _, d in active)
+
     name_w = max([len("Agent")] + [len(n) for n, _ in active] + [len("TEAM TOTAL")]) + 2
     col_w = {c: max(len(c), 5) + 2 for c in cols}
     done_w = max(len("Total"), len(str(tot_done))) + 2
     err_w = max(len("Err"), len(str(tot_err))) + 2
-    case_w = max(len("Case+"), len(str(tot_case))) + 2 if show_case_addition else 0
+    case_w = {}
+    if show_case_addition:
+        for label, key in CASE_ADD_SUBCOLS:
+            case_w[label] = max(len(label), len(str(case_totals[key]))) + 2
 
     header = "Agent".ljust(name_w)
     for c in cols:
         header += c.rjust(col_w[c])
     header += "Total".rjust(done_w) + "Err".rjust(err_w)
     if show_case_addition:
-        header += "Case+".rjust(case_w)
+        for label, _ in CASE_ADD_SUBCOLS:
+            header += label.rjust(case_w[label])
     sep = "-" * len(header)
 
     lines = [header, sep]
@@ -544,7 +622,9 @@ def build_agent_col_table(active, tot_done, tot_err, tot_case, show_case_additio
             row += (str(v) if v else "-").rjust(col_w[c])
         row += str(d["completed_total"]).rjust(done_w) + str(d["error_total"]).rjust(err_w)
         if show_case_addition:
-            row += str(d["case_add_total"]).rjust(case_w)
+            for label, key in CASE_ADD_SUBCOLS:
+                v = d[key]
+                row += (str(v) if v else "-").rjust(case_w[label])
         lines.append(row)
     lines.append(sep)
 
@@ -553,7 +633,8 @@ def build_agent_col_table(active, tot_done, tot_err, tot_case, show_case_additio
         total_row += str(col_totals[c]).rjust(col_w[c])
     total_row += str(tot_done).rjust(done_w) + str(tot_err).rjust(err_w)
     if show_case_addition:
-        total_row += str(tot_case).rjust(case_w)
+        for label, key in CASE_ADD_SUBCOLS:
+            total_row += str(case_totals[key]).rjust(case_w[label])
     lines.append(total_row)
 
     return "\n".join(lines)
