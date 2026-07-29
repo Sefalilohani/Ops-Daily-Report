@@ -203,16 +203,6 @@ def name_tokens(name):
     return frozenset(t for t in "".join(c if c.isalpha() or c == " " else " " for c in cleaned).split() if t)
 
 
-# Every explicitly-configured member name, across every category — used to stop fuzzy
-# matching from "poaching" a Redash record that's actually someone else's exact name.
-# (e.g. QC's "Shivam Kumar" got wrongly fuzzy-matched as MISC's "Shivam Kumar Jha" since
-# {shivam,kumar} is a token-subset of {shivam,kumar,jha} — but they're different people.)
-EXPLICIT_MEMBER_KEYS = {
-    clean_name(m)
-    for channel in CHANNELS
-    for category in channel["categories"]
-    for m in category["members"]
-}
 
 
 def humanize(enum_value):
@@ -414,42 +404,82 @@ def _token_compat(t1, t2):
     return t1 == t2 or (len(t1) == 1 and t2.startswith(t1)) or (len(t2) == 1 and t1.startswith(t2))
 
 
+def _core_tokens(tokens):
+    """Drop bare single-letter initials, keeping only real (multi-letter) name tokens —
+    e.g. roster's 'Janani S P' -> just {'janani'}, so it still lines up with Redash's
+    'Janani Pugalenthi' (S/P are initials for names Redash doesn't show at all)."""
+    core = frozenset(t for t in tokens if len(t) > 1)
+    return core if core else tokens
+
+
 def _names_compatible(tokens_a, tokens_b):
     if tokens_a == tokens_b or tokens_a <= tokens_b or tokens_b <= tokens_a:
         return True
     # Same token count, different content — check for an abbreviation-tolerant pairing
     # (e.g. {priyanka, krishnan} vs {priyanka, k}), not just a same/subset match.
-    if len(tokens_a) != len(tokens_b):
-        return False
-    return any(
-        all(_token_compat(x, y) for x, y in zip(tokens_a, perm))
-        for perm in permutations(tokens_b)
-    )
+    if len(tokens_a) == len(tokens_b) and any(
+        all(_token_compat(x, y) for x, y in zip(tokens_a, perm)) for perm in permutations(tokens_b)
+    ):
+        return True
+    # Ignore bare initials on both sides and compare what's left (handles differing
+    # token counts, e.g. 'Janani S P' vs 'Janani Pugalenthi').
+    core_a, core_b = _core_tokens(tokens_a), _core_tokens(tokens_b)
+    return bool(core_a and core_b and (core_a <= core_b or core_b <= core_a))
 
 
-def match_member(member, agent_data, token_index):
-    """Returns (data_dict_or_None, was_fuzzy_match)."""
-    key = clean_name(member)
-    if key in agent_data:
-        return agent_data[key], False
+def resolve_member_assignments(agent_data):
+    """
+    Resolves every configured member, across ALL categories/channels at once, to at
+    most one Redash record — {(category_label, member_name): data_dict_or_None}.
+    This has to be global, not per-member: a generic roster entry like Followups'
+    "Sahil" and CA+Initiation's real "Sahil Vilas Mule" can BOTH look like a fuzzy
+    match for the same Redash record ("Sahil Mule") in isolation, but only one of
+    them should actually win it. An exact match always wins outright; otherwise the
+    claimant with the highest token overlap wins, and a genuine tie is left
+    unassigned (shows as "no data") rather than guessed.
+    """
+    token_index = build_token_index(agent_data)
 
-    member_tokens = name_tokens(member)
-    if not member_tokens:
-        return None, False
-
-    # Exclude any candidate whose key is literally someone ELSE's exact configured
-    # name (e.g. QC's "Shivam Kumar" must never be fuzzy-claimed as a match for
-    # MISC's "Shivam Kumar Jha" just because one name's tokens are a subset of the
-    # other's — token overlap alone can't tell "missing a middle name" apart from
-    # "two different real people who share a first+last name").
-    candidates = [
-        (k, t) for k, t in token_index
-        if t and _names_compatible(member_tokens, t) and k not in EXPLICIT_MEMBER_KEYS
+    all_members = [
+        (category["label"], member)
+        for channel in CHANNELS
+        for category in channel["categories"]
+        for member in category["members"]
     ]
-    if not candidates:
-        return None, False
-    candidates.sort(key=lambda c: len(c[1] & member_tokens), reverse=True)
-    return agent_data[candidates[0][0]], True
+
+    exact_owner = {}     # candidate_key -> (label, member)
+    claims = defaultdict(list)  # candidate_key -> [(overlap_score, label, member)]
+
+    for label, member in all_members:
+        key = clean_name(member)
+        if key in agent_data:
+            exact_owner[key] = (label, member)
+            continue
+        member_tokens = name_tokens(member)
+        if not member_tokens:
+            continue
+        for k, t in token_index:
+            if t and _names_compatible(member_tokens, t):
+                claims[k].append((len(t & member_tokens), label, member))
+
+    assignments = {(label, member): None for label, member in all_members}
+
+    for key, (label, member) in exact_owner.items():
+        assignments[(label, member)] = agent_data[key]
+
+    for key, claimants in claims.items():
+        if key in exact_owner:
+            continue  # already exclusively owned by an exact match
+        claimants.sort(key=lambda c: c[0], reverse=True)
+        top_score = claimants[0][0]
+        winners = [c for c in claimants if c[0] == top_score]
+        if len(winners) == 1:
+            _, label, member = winners[0]
+            assignments[(label, member)] = agent_data[key]
+        # else: genuine tie between two members for the same record — leave both
+        # unassigned rather than guess which one it really belongs to.
+
+    return assignments
 
 
 # ── FORMAT SLACK MESSAGE ────────────────────────────────────────
@@ -512,7 +542,7 @@ def build_agent_col_table(active, tot_done, tot_err, tot_case, show_case_additio
     return "\n".join(lines)
 
 
-def format_category_section(label, members, agent_data):
+def format_category_section(label, members, agent_data, assignments):
     """
     Returns (list_of_message_bodies, completed_total, error_total, case_add_total).
     A category can span two Slack messages — Task Type table, then Check Type table —
@@ -527,13 +557,12 @@ def format_category_section(label, members, agent_data):
         text = f"*{label}*\n_No members configured yet._"
         return [text + (f"\n{tag_line}" if tag_line else "")], 0, 0, 0
 
-    token_index = build_token_index(agent_data)
     idle_names = []
     unmatched = []
 
     matched_rows = []
     for member in members:
-        d, _was_fuzzy = match_member(member, agent_data, token_index)
+        d = assignments.get((label, member))
         if d is None:
             unmatched.append(member)
             continue
@@ -591,7 +620,7 @@ def format_category_section(label, members, agent_data):
     return [msg1, msg2], tot_done, tot_err, tot_case
 
 
-def format_channel_messages(channel_cfg, date_label, agent_data):
+def format_channel_messages(channel_cfg, date_label, agent_data, assignments):
     """
     Returns a list of message strings — every category posts fully independently
     (its own header, its own tables, its own tag). No combined/cross-team summary —
@@ -601,7 +630,7 @@ def format_channel_messages(channel_cfg, date_label, agent_data):
     categories = channel_cfg["categories"]
     messages = []
     for c in categories:
-        bodies, _done, _err, _case_add = format_category_section(c["label"], c["members"], agent_data)
+        bodies, _done, _err, _case_add = format_category_section(c["label"], c["members"], agent_data, assignments)
         header = f"\U0001f4ca *{c['label']} Team Daily Task Report — {date_label}*"
         messages.append(f"{header}\n\n{bodies[0]}")
         messages.extend(bodies[1:])
@@ -694,6 +723,7 @@ def run_report():
     case_add_rows = fetch_case_additions(start_utc, end_utc)
 
     agent_data = build_agent_data(completed_rows, error_rows, case_add_rows)
+    assignments = resolve_member_assignments(agent_data)
 
     for channel_cfg in CHANNELS:
         has_members = any(c["members"] for c in channel_cfg["categories"])
@@ -701,7 +731,7 @@ def run_report():
             print(f"Skipping channel {channel_cfg['channel_id']} — no members configured yet")
             continue
 
-        messages = format_channel_messages(channel_cfg, date_label, agent_data)
+        messages = format_channel_messages(channel_cfg, date_label, agent_data, assignments)
         target_channel = TEST_CHANNEL_ID or channel_cfg["channel_id"]
 
         for message in messages:
