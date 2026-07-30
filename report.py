@@ -462,7 +462,9 @@ def build_agent_data(completed_rows, error_rows, case_add_rows):
         d["case_add_added_not_filled"] += anf
         d["case_add_filled_only"] += fo
         d["case_add_proxy_added"] += pa
-        d["case_add_total"] += af + anf + fo + pa
+        # "Added, Not Filled" is deliberately excluded from the total — an unfilled form
+        # isn't finished work yet (confirmed with the team, 30 Jul case-addition dispute).
+        d["case_add_total"] += af + fo + pa
 
     return data
 
@@ -599,6 +601,7 @@ def build_agent_col_table(active, tot_done, tot_err, tot_case, show_case_additio
     col_w = {c: max(len(c), 5) + 2 for c in cols}
     done_w = max(len("Total"), len(str(tot_done))) + 2
     err_w = max(len("Err"), len(str(tot_err))) + 2
+    case_total_w = max(len("Case+"), len(str(tot_case))) + 2 if show_case_addition else 0
     case_w = {}
     if show_case_addition:
         for label, key in CASE_ADD_SUBCOLS:
@@ -609,6 +612,7 @@ def build_agent_col_table(active, tot_done, tot_err, tot_case, show_case_additio
         header += c.rjust(col_w[c])
     header += "Total".rjust(done_w) + "Err".rjust(err_w)
     if show_case_addition:
+        header += "Case+".rjust(case_total_w)
         for label, _ in CASE_ADD_SUBCOLS:
             header += label.rjust(case_w[label])
     sep = "-" * len(header)
@@ -622,6 +626,7 @@ def build_agent_col_table(active, tot_done, tot_err, tot_case, show_case_additio
             row += (str(v) if v else "-").rjust(col_w[c])
         row += str(d["completed_total"]).rjust(done_w) + str(d["error_total"]).rjust(err_w)
         if show_case_addition:
+            row += str(d["case_add_total"]).rjust(case_total_w)
             for label, key in CASE_ADD_SUBCOLS:
                 v = d[key]
                 row += (str(v) if v else "-").rjust(case_w[label])
@@ -633,6 +638,7 @@ def build_agent_col_table(active, tot_done, tot_err, tot_case, show_case_additio
         total_row += str(col_totals[c]).rjust(col_w[c])
     total_row += str(tot_done).rjust(done_w) + str(tot_err).rjust(err_w)
     if show_case_addition:
+        total_row += str(tot_case).rjust(case_total_w)
         for label, key in CASE_ADD_SUBCOLS:
             total_row += str(case_totals[key]).rjust(case_w[label])
     lines.append(total_row)
