@@ -324,19 +324,50 @@ def fetch_case_additions(start_utc, end_utc):
     # The 30-day lookback lets an add and a later fill (or vice versa) be matched even
     # when they land on different days, while staying sargable on created_at.
     sql = f"""
-        WITH add_events AS (
+        WITH consent_events AS (
             SELECT
                 cl.candidate_id_fk,
                 CASE WHEN cl.user_type = 1 THEN cl.user_id_fk ELSE cl.proxy_user_id_fk END AS adder_user_id,
                 CASE WHEN cl.user_type = 1 THEN 'DIRECT' ELSE 'PROXY' END AS adder_type,
-                cl.created_at AS add_at,
-                ROW_NUMBER() OVER (PARTITION BY cl.candidate_id_fk ORDER BY cl.created_at ASC) AS rn
+                cl.created_at AS add_at, 0 AS priority
             FROM candidate_logs cl
             WHERE cl.type = 'CANDIDATE_CONSENT_ADDED' AND cl.deleted_at IS NULL
               AND ((cl.user_type = 1 AND cl.user_id_fk IS NOT NULL)
                 OR (cl.user_type = 2 AND cl.proxy_user_id_fk IS NOT NULL))
               AND cl.created_at >= DATE_SUB('{start_utc}', INTERVAL 30 DAY)
               AND cl.created_at < '{end_utc}'
+        ),
+        consent_exists AS (
+            SELECT DISTINCT candidate_id_fk FROM candidate_logs
+            WHERE type = 'CANDIDATE_CONSENT_ADDED' AND deleted_at IS NULL
+              AND created_at >= DATE_SUB('{start_utc}', INTERVAL 30 DAY)
+              AND created_at < '{end_utc}'
+        ),
+        basic_info_fallback AS (
+            -- Some clients' onboarding flow never emits CANDIDATE_CONSENT_ADDED at all — the
+            -- first (and only) touch is a direct/proxy CANDIDATE_BASIC_INFO_UPDATED (e.g.
+            -- Precision Precast, flagged by the team 30 Jul). Only used as a fallback "add"
+            -- signal when NO consent-added event exists for the candidate at all (any
+            -- user_type), so it never overrides/duplicates a real proxy-fill scenario like
+            -- Manas's Adani cases, which DO have a (self-service) consent-added event and
+            -- must stay attributed via the fills CTE instead.
+            SELECT
+                cl.candidate_id_fk,
+                CASE WHEN cl.user_type = 1 THEN cl.user_id_fk ELSE cl.proxy_user_id_fk END AS adder_user_id,
+                CASE WHEN cl.user_type = 1 THEN 'DIRECT' ELSE 'PROXY' END AS adder_type,
+                cl.created_at AS add_at, 1 AS priority
+            FROM candidate_logs cl
+            WHERE cl.type = 'CANDIDATE_BASIC_INFO_UPDATED' AND cl.deleted_at IS NULL
+              AND ((cl.user_type = 1 AND cl.user_id_fk IS NOT NULL)
+                OR (cl.user_type = 2 AND cl.proxy_user_id_fk IS NOT NULL))
+              AND cl.created_at >= DATE_SUB('{start_utc}', INTERVAL 30 DAY)
+              AND cl.created_at < '{end_utc}'
+              AND cl.candidate_id_fk NOT IN (SELECT candidate_id_fk FROM consent_exists)
+        ),
+        add_events AS (
+            SELECT candidate_id_fk, adder_user_id, adder_type, add_at, priority,
+                ROW_NUMBER() OVER (PARTITION BY candidate_id_fk ORDER BY priority ASC, add_at ASC) AS rn
+            FROM (SELECT * FROM consent_events UNION ALL SELECT * FROM basic_info_fallback) x
         ),
         canonical_add AS (
             SELECT candidate_id_fk, adder_user_id, adder_type, add_at FROM add_events WHERE rn = 1
