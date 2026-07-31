@@ -41,10 +41,10 @@ CHANNELS = [
         "categories": [
             {"label": "CA + Initiation", "members": [
                 "Subhashree L", "Priyanka Krishnan", "Manash Pratim Kashyap", "Anitha Sagari Ravirala",
-                "Nikhil .", "Nayan Shandil", "Dharani Lakshmi", "Aaiyana Vinod Sharma", "Poojasri Adambhakam",
+                "Nikhil .", "Aaiyana Vinod Sharma",
                 "Kondeti Ashvitha", "Sahil Vilas Mule", "Nishmeet Singh Rajpal", "Abhishek Parashari",
                 "Abhishek Rawat", "Adithya Padmanabhan", "Indukuri Niranjan Reddy", "Ishita Mishra",
-                "Divyajot Kaur", "Mohd Azfar Khan", "Aishwarya Arya", "Noshin M K", "Anand Kumar",
+                "Divyajot Kaur", "Mohd Azfar Khan", "Noshin M K", "Anand Kumar",
                 "Chinthala VSSSL Mokshajna", "Anmol Sharma",
             ]},
         ],
@@ -53,10 +53,10 @@ CHANNELS = [
         "channel_id": "CS2PEFLMA",  # #sv-in-ops-employment
         "categories": [
             {"label": "Grading", "members": [
-                "Vivek Kumar Singh", "Dithya Ann Mathew", "Tapas Patra", "Bhavica Dhamija", "Tuhin Mondal",
+                "Dithya Ann Mathew", "Bhavica Dhamija", "Tuhin Mondal",
                 "Thejas Vittal", "E Tarun", "Shaeeshta Shaila", "Chirumamilla Hamsa Veni",
                 "Peddireddy Vasu Deva Reddy", "Priyanka Lohia", "Puneesh Hingorani", "Shambhavi Kumari",
-                "Vikas Bishnoi", "Akhil", "Pentapalli Charan", "Samiksha Pilaniya", "K Sai Vaishnav Kumar",
+                "Vikas Bishnoi", "Akhil", "Pentapalli Charan", "K Sai Vaishnav Kumar",
                 "Utkarsh Raj", "Abhishek Mohan", "Surya Pratap", "Jay Pawar",
             ]},
             {"label": "Followups", "members": [
@@ -68,6 +68,8 @@ CHANNELS = [
                 "Mehak Rajput",
                 # EMP Followups
                 "Manisha Suresh Yadav", "Aishu Ji Lochan", "Pratham Rathor", "Adyasha Pattanaik", "Pranshu",
+                # Moved from Grading/CA+Initiation (30 Jul)
+                "Aishwarya Arya", "Samiksha Pilaniya", "Vivek Kumar Singh", "Tapas Patra", "Shaik Suraj",
             ]},
         ],
     },
@@ -75,7 +77,7 @@ CHANNELS = [
         "channel_id": "CQRU28ES0",  # #sv-in-ops-add (Address Verification)
         "categories": [
             {"label": "QC", "members": [
-                "Vikash Sunaliya", "Shafaque Shadni", "Shaik Suraj", "Mohammad Sameem Nazki", "Shlok Paliwal",
+                "Vikash Sunaliya", "Shafaque Shadni", "Mohammad Sameem Nazki", "Shlok Paliwal",
                 "Vanshika Sharma", "Utsav Banerjee", "Sparsh Maheshwari", "Nishant Gupta", "Manpreet Kaur",
                 "Alisha Chaudhary", "Anandita Mahajan", "Nandini Bansal", "Mitta Ruthika", "Boaz Davidson",
                 "Parinita Jadone", "Harshitha Sakkuri", "Chuppa Harshitha", "Shivam Kumar", "Talwinder Singh",
@@ -120,6 +122,8 @@ CHANNELS = [
                 "P Swarna Lakshmi", "Hitakshi Mehto", "Daraksha Hussain", "Shuman Thappa", "Satarupa Konar",
                 "Al Hasan", "Soumik Bandyopadhyay", "Adithyan S", "Aman Raj", "Hasamuddin Ansari",
                 "Ballani Venkata Avinas",
+                # Moved from CA + Initiation (30 Jul)
+                "Poojasri Adambhakam", "Dharani Lakshmi", "Nayan Shandil",
             ]},
         ],
     },
