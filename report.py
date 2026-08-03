@@ -240,7 +240,7 @@ def ist_day_utc_bounds(target_date_ist):
     return start_utc.strftime("%Y-%m-%d %H:%M:%S"), end_utc.strftime("%Y-%m-%d %H:%M:%S")
 
 
-def fetch_adhoc(sql):
+def _fetch_adhoc_once(sql):
     """
     POST /api/query_results (ad-hoc, no saved query object) with max_age=0.
     If queued, poll /api/jobs/{id} until done, matching ops_report.js's pattern.
@@ -269,6 +269,20 @@ def fetch_adhoc(sql):
         if job.get("status") == 4:  # failed
             raise Exception(f"Redash query failed: {job.get('error')}")
     raise Exception("Redash ad-hoc query timed out after 60s")
+
+
+def fetch_adhoc(sql, retries=2):
+    """Retries on top of _fetch_adhoc_once — the underlying MySQL query occasionally hits a
+    transient blip (observed empirically: a query that normally takes 1-2s times out once,
+    then succeeds immediately on the next attempt) rather than being consistently slow."""
+    for attempt in range(retries + 1):
+        try:
+            return _fetch_adhoc_once(sql)
+        except Exception:
+            if attempt == retries:
+                raise
+            print(f"  fetch_adhoc attempt {attempt + 1} failed, retrying...")
+            time.sleep(5)
 
 
 def fetch_completed(start_utc, end_utc):
