@@ -57,7 +57,7 @@ CHANNELS = [
                 "Thejas Vittal", "E Tarun", "Shaeeshta Shaila", "Chirumamilla Hamsa Veni",
                 "Peddireddy Vasu Deva Reddy", "Priyanka Lohia", "Puneesh Hingorani", "Shambhavi Kumari",
                 "Vikas Bishnoi", "Akhil", "Pentapalli Charan", "K Sai Vaishnav Kumar",
-                "Utkarsh Raj", "Abhishek Mohan", "Surya Pratap", "Jay Pawar",
+                "Utkarsh Raj", "Abhishek Mohan", "Surya Pratap", "Jay Pawar", "Rohan Kumarraju",
             ]},
             {"label": "Followups", "members": [
                 # ADD Followups
