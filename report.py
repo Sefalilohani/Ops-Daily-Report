@@ -541,18 +541,30 @@ def _core_tokens(tokens):
 
 
 def _names_compatible(tokens_a, tokens_b):
+    """Returns a match tier (lower = stronger/more specific), or None if incompatible.
+    Tiers matter for tie-breaking: a permutation match (every token accounted for,
+    surname-to-initial abbreviation aside) is a far more specific signal than the
+    bare-first-name-only core-token fallback below, which two DIFFERENT people who
+    happen to share a first name can both satisfy (e.g. "Priyanka Lohia" and
+    "Priyanka Krishnan" both reducing to {priyanka} against Redash's "Priyanka K" —
+    only Krishnan is actually her; Lohia is a distinct real person in another team).
+    Scoring both as equally-strong created a spurious tie that left Krishnan
+    unassigned entirely (30 Jul CA+Initiation report)."""
     if tokens_a == tokens_b or tokens_a <= tokens_b or tokens_b <= tokens_a:
-        return True
+        return 0
     # Same token count, different content — check for an abbreviation-tolerant pairing
     # (e.g. {priyanka, krishnan} vs {priyanka, k}), not just a same/subset match.
     if len(tokens_a) == len(tokens_b) and any(
         all(_token_compat(x, y) for x, y in zip(tokens_a, perm)) for perm in permutations(tokens_b)
     ):
-        return True
+        return 1
     # Ignore bare initials on both sides and compare what's left (handles differing
-    # token counts, e.g. 'Janani S P' vs 'Janani Pugalenthi').
+    # token counts, e.g. 'Janani S P' vs 'Janani Pugalenthi'). Weakest tier — only
+    # requires the remaining core tokens to overlap, not a full pairing.
     core_a, core_b = _core_tokens(tokens_a), _core_tokens(tokens_b)
-    return bool(core_a and core_b and (core_a <= core_b or core_b <= core_a))
+    if core_a and core_b and (core_a <= core_b or core_b <= core_a):
+        return 2
+    return None
 
 
 def resolve_member_assignments(agent_data):
@@ -563,8 +575,9 @@ def resolve_member_assignments(agent_data):
     "Sahil" and CA+Initiation's real "Sahil Vilas Mule" can BOTH look like a fuzzy
     match for the same Redash record ("Sahil Mule") in isolation, but only one of
     them should actually win it. An exact match always wins outright; otherwise the
-    claimant with the highest token overlap wins, and a genuine tie is left
-    unassigned (shows as "no data") rather than guessed.
+    claimant with the strongest match tier wins (see _names_compatible), highest
+    token overlap breaks ties within a tier, and a genuine tie is left unassigned
+    (shows as "no data") rather than guessed.
     """
     token_index = build_token_index(agent_data)
 
@@ -576,7 +589,7 @@ def resolve_member_assignments(agent_data):
     ]
 
     exact_owner = {}     # candidate_key -> (label, member)
-    claims = defaultdict(list)  # candidate_key -> [(overlap_score, label, member)]
+    claims = defaultdict(list)  # candidate_key -> [(tier, overlap_score, label, member)]
 
     for label, member in all_members:
         key = clean_name(member)
@@ -587,8 +600,11 @@ def resolve_member_assignments(agent_data):
         if not member_tokens:
             continue
         for k, t in token_index:
-            if t and _names_compatible(member_tokens, t):
-                claims[k].append((len(t & member_tokens), label, member))
+            if not t:
+                continue
+            tier = _names_compatible(member_tokens, t)
+            if tier is not None:
+                claims[k].append((tier, len(t & member_tokens), label, member))
 
     assignments = {(label, member): None for label, member in all_members}
 
@@ -598,11 +614,13 @@ def resolve_member_assignments(agent_data):
     for key, claimants in claims.items():
         if key in exact_owner:
             continue  # already exclusively owned by an exact match
-        claimants.sort(key=lambda c: c[0], reverse=True)
-        top_score = claimants[0][0]
-        winners = [c for c in claimants if c[0] == top_score]
+        # Lower tier (more specific match) wins outright; overlap size only breaks
+        # ties within the same tier — see _names_compatible for why tier must come first.
+        claimants.sort(key=lambda c: (c[0], -c[1]))
+        top_tier, top_score = claimants[0][0], claimants[0][1]
+        winners = [c for c in claimants if c[0] == top_tier and c[1] == top_score]
         if len(winners) == 1:
-            _, label, member = winners[0]
+            _, _, label, member = winners[0]
             assignments[(label, member)] = agent_data[key]
         # else: genuine tie between two members for the same record — leave both
         # unassigned rather than guess which one it really belongs to.
