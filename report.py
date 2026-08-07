@@ -41,7 +41,7 @@ CHANNELS = [
         "categories": [
             {"label": "CA + Initiation", "members": [
                 "Subhashree L", "Priyanka Krishnan", "Manash Pratim Kashyap", "Anitha Sagari Ravirala",
-                "Nikhil .", "Aaiyana Vinod Sharma",
+                "Aaiyana Vinod Sharma",
                 "Kondeti Ashvitha", "Sahil Vilas Mule", "Nishmeet Singh Rajpal", "Abhishek Parashari",
                 "Abhishek Rawat", "Adithya Padmanabhan", "Indukuri Niranjan Reddy", "Ishita Mishra",
                 "Divyajot Kaur", "Mohd Azfar Khan", "Noshin M K", "Anand Kumar",
