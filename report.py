@@ -53,8 +53,8 @@ CHANNELS = [
         "channel_id": "CS2PEFLMA",  # #sv-in-ops-employment
         "categories": [
             {"label": "Grading", "members": [
-                "Dithya Ann Mathew", "Bhavica Dhamija", "Tuhin Mondal",
-                "Thejas Vittal", "E Tarun", "Shaeeshta Shaila", "Chirumamilla Hamsa Veni",
+                "Dithya Ann Mathew",
+                "E Tarun", "Shaeeshta Shaila", "Chirumamilla Hamsa Veni",
                 "Peddireddy Vasu Deva Reddy", "Priyanka Lohia", "Puneesh Hingorani", "Shambhavi Kumari",
                 "Vikas Bishnoi", "Akhil", "Pentapalli Charan", "K Sai Vaishnav Kumar",
                 "Utkarsh Raj", "Abhishek Mohan", "Surya Pratap", "Jay Pawar", "Rohan Kumarraju",
@@ -78,9 +78,9 @@ CHANNELS = [
         "categories": [
             {"label": "QC", "members": [
                 "Vikash Sunaliya", "Shafaque Shadni", "Mohammad Sameem Nazki", "Shlok Paliwal",
-                "Vanshika Sharma", "Utsav Banerjee", "Sparsh Maheshwari", "Nishant Gupta", "Manpreet Kaur",
-                "Alisha Chaudhary", "Anandita Mahajan", "Nandini Bansal", "Mitta Ruthika", "Boaz Davidson",
-                "Parinita Jadone", "Harshitha Sakkuri", "Chuppa Harshitha", "Shivam Kumar", "Talwinder Singh",
+                "Vanshika Sharma", "Utsav Banerjee", "Nishant Gupta", "Manpreet Kaur",
+                "Alisha Chaudhary", "Mitta Ruthika",
+                "Harshitha Sakkuri", "Chuppa Harshitha", "Talwinder Singh",
                 "Tanisha Thakur", "Subhajit Debbarma", "Saransh Jaggi", "Anushka Jaiswal", "Abhishek Sangwan",
                 "Sachin Kumar Singh",
             ]},
@@ -119,11 +119,11 @@ CHANNELS = [
         "channel_id": "C08TMLA7YSU",  # #sv-in-ops-research
         "categories": [
             {"label": "Research", "members": [
-                "P Swarna Lakshmi", "Hitakshi Mehto", "Daraksha Hussain", "Shuman Thappa", "Satarupa Konar",
-                "Al Hasan", "Soumik Bandyopadhyay", "Adithyan S", "Aman Raj", "Hasamuddin Ansari",
+                "P Swarna Lakshmi", "Daraksha Hussain", "Shuman Thappa", "Satarupa Konar",
+                "Al Hasan", "Adithyan S", "Aman Raj", "Hasamuddin Ansari",
                 "Ballani Venkata Avinas",
                 # Moved from CA + Initiation (30 Jul)
-                "Poojasri Adambhakam", "Dharani Lakshmi", "Nayan Shandil",
+                "Poojasri Adambhakam", "Dharani Lakshmi",
             ]},
         ],
     },
