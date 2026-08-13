@@ -55,9 +55,9 @@ CHANNELS = [
             {"label": "Grading", "members": [
                 "Dithya Ann Mathew",
                 "E Tarun", "Shaeeshta Shaila", "Chirumamilla Hamsa Veni",
-                "Peddireddy Vasu Deva Reddy", "Priyanka Lohia", "Puneesh Hingorani", "Shambhavi Kumari",
-                "Vikas Bishnoi", "Akhil", "Pentapalli Charan", "K Sai Vaishnav Kumar",
-                "Utkarsh Raj", "Abhishek Mohan", "Surya Pratap", "Jay Pawar", "Rohan Kumarraju",
+                "Peddireddy Vasu Deva Reddy", "Priyanka Lohia", "Shreshth Sahu", "Puneesh Hingorani", "Shambhavi Kumari",
+                "Vikas Bishnoi", "Akhil", "Pentapalli Charan", "K Sai Vaishnav Kumar", "Lakshit Raina",
+                "Utkarsh Raj", "Abhishek Mohan", "Mohamed Waseem kurikkal M P", "Surya Pratap", "Jay Pawar", "Anisha Kumari", "Rohan Kumarraju",
             ]},
             {"label": "Followups", "members": [
                 # ADD Followups
