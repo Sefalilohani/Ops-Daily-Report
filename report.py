@@ -56,18 +56,18 @@ CHANNELS = [
                 "Dithya Ann Mathew",
                 "E Tarun", "Shaeeshta Shaila", "Chirumamilla Hamsa Veni",
                 "Peddireddy Vasu Deva Reddy", "Priyanka Lohia", "Shreshth Sahu", "Puneesh Hingorani", "Shambhavi Kumari",
-                "Vikas Bishnoi", "Akhil", "Pentapalli Charan", "K Sai Vaishnav Kumar", "Lakshit Raina",
+                "Vikas Bishnoi", "Akhil", "Pentapalli Charan", "K Sai Vaishnav Kumar", "Lakshit Raina", 
                 "Utkarsh Raj", "Abhishek Mohan", "Mohamed Waseem kurikkal M P", "Surya Pratap", "Jay Pawar", "Anisha Kumari", "Rohan Kumarraju",
             ]},
             {"label": "Followups", "members": [
                 # ADD Followups
                 "Chandrima Banik", "Nishika Dwivedi", "Anindita Maity", "Jillella Akshaya Prajwala",
-                "Bevara Hemanth Kumar", "Debjani Dutta Gupta", "Raunak Kumar", "Sahil",
+                "Bevara Hemanth Kumar", "Debjani Dutta Gupta",
                 # EDU Followups
                 "Kartik Kaushal", "Navaneetha KS", "D Joyce Blessia", "Janani S P", "Nara Sumanth",
                 "Mehak Rajput",
                 # EMP Followups
-                "Manisha Suresh Yadav", "Aishu Ji Lochan", "Pratham Rathor", "Adyasha Pattanaik", "Pranshu",
+                "Manisha Suresh Yadav", "Aishu Ji Lochan", "Pratham Rathor", "Adyasha Pattanaik", "Pranshu", "Gayathri A", "Dharani Lakshmi", "P Swarna Lakshmi", "Udita Singh", 
                 # Moved from Grading/CA+Initiation (30 Jul)
                 "Aishwarya Arya", "Samiksha Pilaniya", "Vivek Kumar Singh", "Tapas Patra", "Shaik Suraj",
             ]},
@@ -82,7 +82,7 @@ CHANNELS = [
                 "Alisha Chaudhary", "Mitta Ruthika",
                 "Harshitha Sakkuri", "Chuppa Harshitha", "Talwinder Singh",
                 "Tanisha Thakur", "Subhajit Debbarma", "Saransh Jaggi", "Anushka Jaiswal", "Abhishek Sangwan",
-                "Sachin Kumar Singh",
+                "Sachin Kumar Singh", "Vinay Pratap Singh", "Manish Kumar Thakur", "Nipun Singh", "Aikansh Katiyar",
             ]},
             {"label": "Email Clearance", "members": [
                 # ADD E-mail Clearance
@@ -119,11 +119,11 @@ CHANNELS = [
         "channel_id": "C08TMLA7YSU",  # #sv-in-ops-research
         "categories": [
             {"label": "Research", "members": [
-                "P Swarna Lakshmi", "Daraksha Hussain", "Shuman Thappa", "Satarupa Konar",
+                "Daraksha Hussain", "Shuman Thappa", "Satarupa Konar",
                 "Al Hasan", "Adithyan S", "Aman Raj", "Hasamuddin Ansari",
                 "Ballani Venkata Avinas",
                 # Moved from CA + Initiation (30 Jul)
-                "Poojasri Adambhakam", "Dharani Lakshmi",
+                "Poojasri Adambhakam",
             ]},
         ],
     },
@@ -131,7 +131,7 @@ CHANNELS = [
         "channel_id": "C08MMSLV43H",  # #sv-in-ops-ref
         "categories": [
             {"label": "Reference", "members": [
-                "Nazia Hasan", "Sakshi Bhuyan", "Gayathri A", "Kishore M", "Udita Singh",
+                "Nazia Hasan", "Sakshi Bhuyan", "Kishore M", "Raunak Kumar", "Sahil",
             ]},
         ],
     },
