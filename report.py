@@ -42,7 +42,7 @@ CHANNELS = [
             {"label": "CA + Initiation", "members": [
                 "Subhashree L", "Priyanka Krishnan", "Manash Pratim Kashyap", "Anitha Sagari Ravirala",
                 "Aaiyana Vinod Sharma",
-                "Kondeti Ashvitha", "Sahil Vilas Mule", "Nishmeet Singh Rajpal", "Abhishek Parashari",
+                "Abhishek Parashari",
                 "Abhishek Rawat", "Adithya Padmanabhan", "Indukuri Niranjan Reddy", "Ishita Mishra",
                 "Divyajot Kaur", "Mohd Azfar Khan", "Noshin M K", "Anand Kumar",
                 "Chinthala VSSSL Mokshajna", "Anmol Sharma",
@@ -121,7 +121,7 @@ CHANNELS = [
             {"label": "Research", "members": [
                 "Daraksha Hussain", "Shuman Thappa", "Satarupa Konar",
                 "Al Hasan", "Adithyan S", "Aman Raj", "Hasamuddin Ansari",
-                "Ballani Venkata Avinas",
+                "Ballani Venkata Avinas", "Khushi",
                 # Moved from CA + Initiation (30 Jul)
                 "Poojasri Adambhakam",
             ]},
