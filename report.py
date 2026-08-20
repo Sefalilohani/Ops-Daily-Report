@@ -511,9 +511,10 @@ def build_agent_data(completed_rows, error_rows, case_add_rows):
         d["case_add_added_not_filled"] += anf
         d["case_add_filled_only"] += fo
         d["case_add_proxy_added"] += pa
-        # "Added, Not Filled" is deliberately excluded from the total — an unfilled form
-        # isn't finished work yet (confirmed with the team, 30 Jul case-addition dispute).
-        d["case_add_total"] += af + fo + pa
+        # Case+ = sum of all 4 buckets. Previously excluded "Added, Not Filled" per the
+        # 30 Jul dispute (unfilled form isn't done work), but Shalini/Sefali confirmed
+        # 20 Aug that Case+ should be the total of everything for target-tracking.
+        d["case_add_total"] += af + anf + fo + pa
 
     return data
 
