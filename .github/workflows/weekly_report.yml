@@ -2,7 +2,7 @@ name: Weekly Ops Performance Report
 
 on:
   schedule:
-    - cron: '30 5 * * 1'   # Monday 11:00 AM IST
+    - cron: '30 3 * * 1'   # Monday 9:00 AM IST
   workflow_dispatch:
     inputs:
       report_start:
