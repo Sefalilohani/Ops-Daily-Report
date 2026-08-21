@@ -40,7 +40,7 @@ TEST_CHANNEL_ALIASES = {"testing-sefali": "C0AGRE19V6U"}
 TEST_CHANNEL_ID = TEST_CHANNEL_ALIASES.get(os.environ.get("TEST_CHANNEL", "").strip(), "")
 
 HR_CHANNEL_ID = "C029UP81727"  # #hr-sv-ops
-HR_PIP_TAGS = "cc: <@UN1E2L4G0> <@U03BUG17X54> <@U017K6KQT2A>"  # Selva, Ramya, Thanveer
+HR_PIP_TAGS = "cc: <@UN1E2L4G0> <@U03BUG17X54> <@U017K6KQT2A> <@UURRMS3MG>"  # Selva, Ramya, Thanveer, Shalini
 
 # ── DATE RANGE: previous Monday-Sunday, unless overridden ──
 
@@ -914,13 +914,16 @@ def main():
                 errors = d["error_total"] if d else 0
                 display_name = (d["display_name"] if d else None) or member
                 leaves = leave_totals.get(clean_name(member), 0.0) or best_match(member, leave_totals) or 0.0
+                wfh = wfh_totals.get(clean_name(member), 0.0) or best_match(member, wfh_totals) or 0.0
                 target, daily_target, effective_days = get_target(member, leaves)
                 achieved_metric = case_add if label in CASE_ADD_TARGET_TEAMS else completed
                 pct_achieved = round(achieved_metric / target * 100, 1) if target else None
+                avg_day = round(achieved_metric / effective_days, 1) if effective_days else 0
                 if target and pct_achieved is not None and pct_achieved < 70:
                     typ, cohort = get_type_cohort(member)
                     below_70.append({
                         "name": display_name, "team": label, "completed": completed, "errors": errors,
+                        "avg_day": avg_day, "leaves": leaves, "wfh": wfh,
                         "target": target, "daily_target": daily_target, "pct_achieved": pct_achieved,
                         "type": typ, "cohort": cohort, "is_new_joiner": member in NEW_JOINERS,
                     })
@@ -947,11 +950,14 @@ def main():
             # Plain Slack chat.postMessage has no markdown-table rendering — a
             # monospace code block (like every other report in this repo) is the
             # actual "readable table" here, not a GFM pipe table.
-            cols = ["Agent", "Team", "Completed", "Target", "%Ach"]
+            cols = ["Agent", "Team", "Completed", "Errors", "Avg/Day", "Target", "%Ach", "Leaves", "WFH"]
             display_rows = []
             for r in rows:
                 marker = " (new joiner)" if r["is_new_joiner"] else ""
-                display_rows.append([r["name"] + marker, r["team"], str(r["completed"]), fmt(r["target"]), f"{r['pct_achieved']}%"])
+                display_rows.append([
+                    r["name"] + marker, r["team"], str(r["completed"]), str(r["errors"]), fmt(r["avg_day"]),
+                    fmt(r["target"]), f"{r['pct_achieved']}%", fmt(r["leaves"]), fmt(r["wfh"]),
+                ])
             widths = [max(len(cols[i]), *(len(dr[i]) for dr in display_rows)) + 2 for i in range(len(cols))]
             header_line = "".join(cols[i].ljust(widths[i]) if i == 0 else cols[i].rjust(widths[i]) for i in range(len(cols)))
             sep_line = "-" * len(header_line)
