@@ -1,0 +1,47 @@
+name: Weekly Ops Performance Report
+
+on:
+  schedule:
+    - cron: '30 3 * * 1'   # Monday 9:00 AM IST
+  workflow_dispatch:
+    inputs:
+      report_start:
+        description: 'Override range start (YYYY-MM-DD). Leave blank with report_end for "last Mon-Sun".'
+        required: false
+        default: ''
+      report_end:
+        description: 'Override range end (YYYY-MM-DD). Leave blank with report_start for "last Mon-Sun".'
+        required: false
+        default: ''
+      test_channel:
+        description: 'Test only: redirect ALL channel posts (including the HR PIP thread) here instead of the real routing. Leave as "none" for production.'
+        required: false
+        type: choice
+        options:
+          - none
+          - testing-sefali
+        default: none
+
+jobs:
+  send-weekly-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run weekly performance report
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          REPORT_START: ${{ github.event.inputs.report_start }}
+          REPORT_END: ${{ github.event.inputs.report_end }}
+          TEST_CHANNEL: ${{ github.event.inputs.test_channel }}
+        run: python weekly_report.py
