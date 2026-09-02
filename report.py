@@ -121,7 +121,7 @@ CHANNELS = [
             {"label": "Research", "members": [
                 "Daraksha Hussain", "Shuman Thappa", "Satarupa Konar",
                 "Al Hasan", "Adithyan S", "Aman Raj", "Hasamuddin Ansari",
-                "Ballani Venkata Avinas", "Khushi",
+                "Ballani Venkata Avinas", "Khushi", "Yusra Waseem",
                 # Moved from CA + Initiation (30 Jul)
                 "Poojasri Adambhakam",
             ]},
