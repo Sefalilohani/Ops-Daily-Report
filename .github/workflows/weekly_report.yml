@@ -1,8 +1,9 @@
 name: Weekly Ops Performance Report
 
 on:
-  schedule:
-    - cron: '30 3 * * 1'   # Monday 9:00 AM IST
+  # Cron schedule removed — this report now runs on a Google Apps Script time
+  # trigger instead (see apps-script/WeeklyReport.gs + Triggers.gs). Manual
+  # dispatch kept as a fallback/comparison path.
   workflow_dispatch:
     inputs:
       report_start:

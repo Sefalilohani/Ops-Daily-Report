@@ -1,8 +1,9 @@
 name: CA + Initiation Daily Task Report
 
 on:
-  schedule:
-    - cron: '0 1 * * *'   # 6:30 AM IST
+  # Cron schedule removed — this report now runs on a Google Apps Script time
+  # trigger instead (see apps-script/DailyReport.gs + Triggers.gs). Manual
+  # dispatch kept as a fallback/comparison path.
   workflow_dispatch:
     inputs:
       report_date:
