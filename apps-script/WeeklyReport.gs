@@ -47,7 +47,7 @@ var Weekly = (function () {
         'Chirumamilla Hamsa Veni', // Cohort 3
         'Puneesh Hingorani', 'Shambhavi Kumari', 'Vikas Bishnoi', 'Akhil', 'K Sai Vaishnav Kumar',
         'Utkarsh Raj', 'Abhishek Mohan', 'Surya Pratap', 'Jay Pawar', // Cohort 4
-        'Jampana Rohan Kumar Raju', 'Mohamed Waseem kurikkal M P', 'Shreshth Sahu', 'Lakshit Raina', // Cohort 6
+        'Rohan Kumarraju', 'Mohamed Waseem kurikkal M P', 'Shreshth Sahu', 'Lakshit Raina', // Cohort 6
         'Nitin Singh Sikarwar', 'Tappa Shaik Mohammed Vasif', 'Jyoti Raj', 'Akanksha Kumari',
         'Keerthi Rithvik Teja', 'Vaibhav Kumar Singh', 'Tarun Rajput' // Cohort 7
       ] },
@@ -55,7 +55,7 @@ var Weekly = (function () {
         // ADD Followups
         'Nishika Dwivedi', 'Anindita Maity', 'Jillella Akshaya Prajwala', 'Bevara Hemanth Kumar',
         // EDU Followups
-        'Navaneetha KS', 'D Joyce Blessia', 'Janani S P', 'Nara Sumanth', 'Mehak Rajput',
+        'Navaneetha KS', 'D Joyce Blessia', 'Nara Sumanth', 'Mehak Rajput',
         // EMP Followups
         'Manisha Suresh Yadav', 'Shaik Suraj', 'Vivek Kumar Singh', 'Tapas Patra',
         'Pranshu', 'Aishwarya Arya', 'Samiksha Pilaniya',
@@ -85,7 +85,7 @@ var Weekly = (function () {
       { label: 'Research', members: [
         'Shuman Thappa', 'Satarupa Konar', 'Al Hasan', 'Poojasri Adambhakam',
         'Adithyan S', 'Aman Raj', 'Hasamuddin Ansari', 'Ballani Venkata Avinas', // Cohort 5
-        'Khushi Kumari', 'Yusra Waseem' // Cohort 6
+        'Khushi', 'Yusra Waseem' // Cohort 6
       ] }
     ] },
     { channel_id: 'C08MMSLV43H', channel_name: '#sv-in-ops-ref', categories: [
@@ -147,7 +147,7 @@ var Weekly = (function () {
     ['Akhil', 'Intern', 'MF', 180, 4], ['K Sai Vaishnav Kumar', 'Intern', 'MF', 180, 4],
     ['Utkarsh Raj', 'Intern', 'MF', 180, 4], ['Abhishek Mohan', 'Intern', 'MF', 180, 4],
     ['Surya Pratap', 'Intern', 'MF', 180, 4], ['Jay Pawar', 'Intern', 'MF', 180, 4],
-    ['Jampana Rohan Kumar Raju', 'Intern', 'MF', 180, 6], ['Mohamed Waseem kurikkal M P', 'Intern', 'MF', 180, 6],
+    ['Rohan Kumarraju', 'Intern', 'MF', 180, 6], ['Mohamed Waseem kurikkal M P', 'Intern', 'MF', 180, 6],
     ['Shreshth Sahu', 'Intern', 'MF', 180, 6], ['Lakshit Raina', 'Intern', 'MF', 180, 6],
     ['Nitin Singh Sikarwar', 'Intern', 'MF', 180, 7], ['Tappa Shaik Mohammed Vasif', 'Intern', 'MF', 180, 7],
     ['Jyoti Raj', 'Intern', 'MF', 180, 7], ['Akanksha Kumari', 'Intern', 'MF', 180, 7],
@@ -177,7 +177,7 @@ var Weekly = (function () {
     ['Poojasri Adambhakam', 'FTE', 'TS', 130, null], ['Adithyan S', 'Intern', 'MF', 115, 5],
     ['Aman Raj', 'Intern', 'MF', 115, 5], ['Hasamuddin Ansari', 'Intern', 'MF', 115, 5],
     ['Ballani Venkata Avinas', 'Intern', 'MF', 115, 5],
-    ['Khushi Kumari', 'Intern', 'MF', 115, 6], ['Yusra Waseem', 'Intern', 'MF', 115, 6],
+    ['Khushi', 'Intern', 'MF', 115, 6], ['Yusra Waseem', 'Intern', 'MF', 115, 6],
 
     ['Nazia Hasan', 'FTE', 'TS', 195, null], ['Sakshi Bhuyan', 'FTE', 'MF', 195, null],
     ['Kishore M', 'FTE', 'MF', 195, null], ['Raunak Kumar', 'Intern', 'MF', 170, 5],
@@ -191,7 +191,6 @@ var Weekly = (function () {
     ['Nishika Dwivedi', 'FTE', 'TS', 145, null], ['Anindita Maity', 'FTE', 'TS', 145, null],
     ['Jillella Akshaya Prajwala', 'FTE', 'TS', 145, null], ['Bevara Hemanth Kumar', 'FTE', 'MF', 145, null],
     ['Navaneetha KS', 'FTE', 'MF', 140, null], ['D Joyce Blessia', 'FTE', 'TS', 140, null],
-    ['Janani S P', 'FTE', 'MF', 140, null],
     ['Nara Sumanth', 'Intern', 'MF', 120, 5], ['Mehak Rajput', 'Intern', 'MF', 120, 5],
     ['Manisha Suresh Yadav', 'FTE', 'MF', 110, null], ['Shaik Suraj', 'FTE', 'MF', 110, null],
     ['Vivek Kumar Singh', 'FTE', 'MF', 110, null], ['Tapas Patra', 'FTE', 'MF', 110, null],

@@ -43,7 +43,7 @@ var Daily = (function () {
           'Chirumamilla Hamsa Veni', // Cohort 3
           'Puneesh Hingorani', 'Shambhavi Kumari', 'Vikas Bishnoi', 'Akhil', 'K Sai Vaishnav Kumar',
           'Utkarsh Raj', 'Abhishek Mohan', 'Surya Pratap', 'Jay Pawar', // Cohort 4
-          'Jampana Rohan Kumar Raju', 'Mohamed Waseem kurikkal M P', 'Shreshth Sahu', 'Lakshit Raina', // Cohort 6
+          'Rohan Kumarraju', 'Mohamed Waseem kurikkal M P', 'Shreshth Sahu', 'Lakshit Raina', // Cohort 6
           'Nitin Singh Sikarwar', 'Tappa Shaik Mohammed Vasif', 'Jyoti Raj', 'Akanksha Kumari',
           'Keerthi Rithvik Teja', 'Vaibhav Kumar Singh', 'Tarun Rajput' // Cohort 7
         ] },
@@ -51,7 +51,7 @@ var Daily = (function () {
           // ADD Followups
           'Nishika Dwivedi', 'Anindita Maity', 'Jillella Akshaya Prajwala', 'Bevara Hemanth Kumar',
           // EDU Followups
-          'Navaneetha KS', 'D Joyce Blessia', 'Janani S P', 'Nara Sumanth', 'Mehak Rajput',
+          'Navaneetha KS', 'D Joyce Blessia', 'Nara Sumanth', 'Mehak Rajput',
           // EMP Followups
           'Manisha Suresh Yadav', 'Shaik Suraj', 'Vivek Kumar Singh', 'Tapas Patra',
           'Pranshu', 'Aishwarya Arya', 'Samiksha Pilaniya',
@@ -99,7 +99,7 @@ var Daily = (function () {
         { label: 'Research', members: [
           'Shuman Thappa', 'Satarupa Konar', 'Al Hasan', 'Poojasri Adambhakam',
           'Adithyan S', 'Aman Raj', 'Hasamuddin Ansari', 'Ballani Venkata Avinas', // Cohort 5
-          'Khushi Kumari', 'Yusra Waseem' // Cohort 6
+          'Khushi', 'Yusra Waseem' // Cohort 6
         ] }
       ]
     },
