@@ -27,7 +27,9 @@ var Daily = (function () {
           'Abhishek Parashari',
           'Abhishek Rawat', 'Adithya Padmanabhan', 'Indukuri Niranjan Reddy', 'Ishita Mishra',
           'Divyajot Kaur', 'Mohd Azfar Khan', 'Noshin M K', 'Anand Kumar',
-          'Chinthala VSSSL Mokshajna', 'Anmol Sharma'
+          'Chinthala VSSSL Mokshajna', 'Anmol Sharma',
+          'Vaishali Bhandari', 'Shouriya Tayal', 'Vipul Patial', 'Prashant Gupta',
+          'Pragati Kashyap', 'Anmol Nagpal', 'Kishan Yadav', 'Lovely', 'Siddhartha Kumar'
         ] }
       ]
     },
@@ -39,7 +41,9 @@ var Daily = (function () {
           'E Tarun', 'Shaeeshta Shaila', 'Chirumamilla Hamsa Veni',
           'Peddireddy Vasu Deva Reddy', 'Priyanka Lohia', 'Shreshth Sahu', 'Puneesh Hingorani', 'Shambhavi Kumari',
           'Vikas Bishnoi', 'Akhil', 'Pentapalli Charan', 'K Sai Vaishnav Kumar', 'Lakshit Raina',
-          'Utkarsh Raj', 'Abhishek Mohan', 'Mohamed Waseem kurikkal M P', 'Surya Pratap', 'Jay Pawar', 'Anisha Kumari', 'Rohan Kumarraju'
+          'Utkarsh Raj', 'Abhishek Mohan', 'Mohamed Waseem kurikkal M P', 'Surya Pratap', 'Jay Pawar', 'Anisha Kumari', 'Rohan Kumarraju',
+          'Nitin Singh Sikarwar', 'Tappa Shaik Mohammed Vasif', 'Jyoti Raj', 'Akanksha Kumari',
+          'Keerthi Rithvik Teja', 'Vaibhav Kumar Singh', 'Tarun Rajput'
         ] },
         { label: 'Followups', members: [
           'Chandrima Banik', 'Nishika Dwivedi', 'Anindita Maity', 'Jillella Akshaya Prajwala',

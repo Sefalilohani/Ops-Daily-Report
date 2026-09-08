@@ -33,7 +33,9 @@ var Weekly = (function () {
         'Aaiyana Vinod Sharma', 'Kondeti Ashvitha', 'Sahil Vilas Mule', 'Nishmeet Singh Rajpal',
         'Abhishek Parashari', 'Abhishek Rawat', 'Adithya Padmanabhan', 'Indukuri Niranjan Reddy',
         'Ishita Mishra', 'Divyajot Kaur', 'Mohd Azfar Khan', 'Noshin M K', 'Anand Kumar',
-        'Chinthala VSSSL Mokshajna', 'Anmol Sharma'
+        'Chinthala VSSSL Mokshajna', 'Anmol Sharma',
+        'Vaishali Bhandari', 'Shouriya Tayal', 'Vipul Patial', 'Prashant Gupta',
+        'Pragati Kashyap', 'Anmol Nagpal', 'Kishan Yadav', 'Lovely', 'Siddhartha Kumar'
       ] }
     ] },
     { channel_id: 'CS2PEFLMA', channel_name: '#sv-in-ops-employment', categories: [
@@ -42,7 +44,9 @@ var Weekly = (function () {
         'Peddireddy Vasu Deva Reddy', 'Priyanka Lohia', 'Shreshth Sahu', 'Puneesh Hingorani',
         'Shambhavi Kumari', 'Vikas Bishnoi', 'Akhil', 'Pentapalli Charan', 'K Sai Vaishnav Kumar',
         'Lakshit Raina', 'Utkarsh Raj', 'Abhishek Mohan', 'Mohamed Waseem kurikkal M P',
-        'Surya Pratap', 'Jay Pawar', 'Anisha Kumari', 'Rohan Kumarraju'
+        'Surya Pratap', 'Jay Pawar', 'Anisha Kumari', 'Rohan Kumarraju',
+        'Nitin Singh Sikarwar', 'Tappa Shaik Mohammed Vasif', 'Jyoti Raj', 'Akanksha Kumari',
+        'Keerthi Rithvik Teja', 'Vaibhav Kumar Singh', 'Tarun Rajput'
       ] },
       { label: 'Followups', members: [
         'Chandrima Banik', 'Nishika Dwivedi', 'Anindita Maity', 'Jillella Akshaya Prajwala',
@@ -172,9 +176,10 @@ var Weekly = (function () {
     ['Kishore M', 'FTE', 'MF', 195, null], ['Raunak Kumar', 'Intern', 'MF', 170, 5],
     ['Sahil', 'Intern', 'MF', 170, 5],
 
-    ['Manas Kumar Mishra', 'FTE', 'TS', 55, null], ['Abhay Chandrakant Nayak', 'FTE', 'TS', 55, null],
-    ['Rahul Sutradhar', 'FTE', 'MF', 55, null], ['Ankita Basak', 'FTE', 'MF', 55, null],
-    ['Chirag Sethi', 'FTE', 'MF', 55, null], ['Sonia Thakur', 'FTE', 'TS', 55, null],
+    // Case Addition daily target: 45/day for FTE, 35/day for Intern (updated 8 Sep 2026).
+    ['Manas Kumar Mishra', 'FTE', 'TS', 45, null], ['Abhay Chandrakant Nayak', 'FTE', 'TS', 45, null],
+    ['Rahul Sutradhar', 'FTE', 'MF', 45, null], ['Ankita Basak', 'FTE', 'MF', 45, null],
+    ['Chirag Sethi', 'FTE', 'MF', 45, null], ['Sonia Thakur', 'FTE', 'TS', 45, null],
 
     ['Nishika Dwivedi', 'FTE', 'TS', 145, null], ['Anindita Maity', 'FTE', 'TS', 145, null],
     ['Jillella Akshaya Prajwala', 'FTE', 'TS', 145, null], ['Bevara Hemanth Kumar', 'FTE', 'MF', 145, null],
