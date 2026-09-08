@@ -2,7 +2,7 @@
  * Weekly Ops Performance Report — ported 1:1 from weekly_report.py (Ops-Daily-Report repo).
  * Every Monday, reports on the PRECEDING Monday-Sunday week for all Ops sub-teams:
  * Summary (Completed/Errors/Avg-Day/Calls/Target/%Achieved/Leaves/WFH), By Task Type,
- * By Check Type — posted to each team's Slack channel. Also posts a "Below 70% of
+ * By Check Type — posted to each team's Slack channel. Also posts a "Below 80% of
  * Target" breakdown (FTE, then Interns by cohort) as a thread in the HR ops channel.
  *
  * Secrets: Script Properties "REDASH_API_KEY", "SLACK_BOT_TOKEN".
@@ -769,8 +769,15 @@ var Weekly = (function () {
 
   function getRangeValues(ss, sheetName, a1Range) {
     var sheet = ss.getSheetByName(sheetName);
-    if (!sheet) return [];
-    return sheet.getRange(a1Range).getValues();
+    if (!sheet) throw new Error('Sheet tab not found: "' + sheetName + '" (check exact spelling/case in the Bounty spreadsheet)');
+    // getDisplayValues(), not getValues() — Leave/WFH/Call Log columns are
+    // date-formatted cells, so getValues() hands back native JS Date objects
+    // (e.g. "Mon Sep 07 2026 00:00:00 GMT+0530...") that parseDmy's DD-Mon-YYYY
+    // regex can't match, silently skipping every row and reading as 0 for
+    // everyone. getDisplayValues() returns the same formatted "07-Sep-2026"
+    // string the old Python version got from the Sheets API's FORMATTED_VALUE
+    // render option.
+    return sheet.getRange(a1Range).getDisplayValues();
   }
 
   function fetchLeaveTotals(ss, START, END) {
@@ -1023,7 +1030,7 @@ var Weekly = (function () {
           postSlackMessage(slackToken, targetChannel, m);
         });
 
-        // Collect below-70%-of-target rows for the HR PIP post.
+        // Collect below-80%-of-target rows for the HR PIP post.
         members.forEach(function (member) {
           var d = assignments.get(label, member);
           var completed = d ? d.completed_total : 0;
@@ -1036,7 +1043,7 @@ var Weekly = (function () {
           var achievedMetric = CASE_ADD_TARGET_TEAMS[label] ? caseAdd : completed;
           var pctAchieved = tgt.target ? Math.round((achievedMetric / tgt.target) * 1000) / 10 : null;
           var avgDay = tgt.effectiveDays ? Math.round((achievedMetric / tgt.effectiveDays) * 10) / 10 : 0;
-          if (tgt.target && pctAchieved !== null && pctAchieved < 70) {
+          if (tgt.target && pctAchieved !== null && pctAchieved < 80) {
             var tc = getTypeCohort(member);
             below70.push({
               name: displayName, team: label, completed: completed, errors: errors,
@@ -1049,7 +1056,7 @@ var Weekly = (function () {
       });
     });
 
-    // ── HR PIP post: new thread, FTE then Cohort 1-7 ──
+    // ── HR PIP post (below 80% of target): new thread, FTE then Cohort 1-7 ──
     var groups = [];
     var fteRows = below70.filter(function (r) { return r.type === 'FTE'; }).sort(function (a, b) { return a.pct_achieved - b.pct_achieved; });
     if (fteRows.length) groups.push(['FTE', fteRows]);
@@ -1064,7 +1071,7 @@ var Weekly = (function () {
 
     if (groups.length) {
       var hrChannel = testChannelId || HR_CHANNEL_ID;
-      var intro = '🚨 *PIP Review — Below 70% of Target (' + DATE_LABEL + ')*';
+      var intro = '🚨 *PIP Review — Below 80% of Target (' + DATE_LABEL + ')*';
       var threadTs = postSlackMessage(slackToken, hrChannel, intro);
       groups.forEach(function (pair) {
         var groupLabel = pair[0], grows = pair[1];
@@ -1086,9 +1093,9 @@ var Weekly = (function () {
         postSlackMessage(slackToken, hrChannel, body, threadTs);
       });
       postSlackMessage(slackToken, hrChannel, HR_PIP_TAGS + ' — please review the above and confirm on PIP.', threadTs);
-      Logger.log('  Posted HR PIP thread with ' + below70.length + ' below-70% rows across ' + groups.length + ' groups');
+      Logger.log('  Posted HR PIP thread with ' + below70.length + ' below-80% rows across ' + groups.length + ' groups');
     } else {
-      Logger.log('  No below-70%-of-target rows this week — skipping HR PIP post');
+      Logger.log('  No below-80%-of-target rows this week — skipping HR PIP post');
     }
   }
 
