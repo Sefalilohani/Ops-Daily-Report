@@ -26,62 +26,66 @@ var Weekly = (function () {
   var CASE_ADD_TARGET_TEAMS = { 'Case Addition': true };
 
   // ── CHANNEL / TEAM CONFIG (all sub-teams) ──
+  // Member lists synced from the "Ops Team Roster" artifact (as of 2026-09-07) —
+  // that artifact is the source of truth for who's active on which team; refer to
+  // it (not this file's git history) when posting reports or checking membership.
   var CHANNELS = [
     { channel_id: 'CS5CX8LPQ', channel_name: '#sv-in-ops-caseanalysis', categories: [
       { label: 'CA + Initiation', members: [
         'Subhashree L', 'Priyanka Krishnan', 'Manash Pratim Kashyap', 'Anitha Sagari Ravirala',
-        'Aaiyana Vinod Sharma', 'Kondeti Ashvitha', 'Sahil Vilas Mule', 'Nishmeet Singh Rajpal',
+        'Aaiyana Vinod Sharma',
         'Abhishek Parashari', 'Abhishek Rawat', 'Adithya Padmanabhan', 'Indukuri Niranjan Reddy',
         'Ishita Mishra', 'Divyajot Kaur', 'Mohd Azfar Khan', 'Noshin M K', 'Anand Kumar',
-        'Chinthala VSSSL Mokshajna', 'Anmol Sharma',
+        'Chinthala VSSSL Mokshajna', 'Anmol Sharma', // Cohort 4
         'Vaishali Bhandari', 'Shouriya Tayal', 'Vipul Patial', 'Prashant Gupta',
-        'Pragati Kashyap', 'Anmol Nagpal', 'Kishan Yadav', 'Lovely', 'Siddhartha Kumar'
+        'Pragati Kashyap', 'Anmol Nagpal', 'Kishan Yadav', 'Lovely', 'Siddhartha Kumar' // Cohort 7
       ] }
     ] },
     { channel_id: 'CS2PEFLMA', channel_name: '#sv-in-ops-employment', categories: [
       { label: 'Grading', members: [
-        'Dithya Ann Mathew', 'E Tarun', 'Shaeeshta Shaila', 'Chirumamilla Hamsa Veni',
-        'Peddireddy Vasu Deva Reddy', 'Priyanka Lohia', 'Shreshth Sahu', 'Puneesh Hingorani',
-        'Shambhavi Kumari', 'Vikas Bishnoi', 'Akhil', 'Pentapalli Charan', 'K Sai Vaishnav Kumar',
-        'Lakshit Raina', 'Utkarsh Raj', 'Abhishek Mohan', 'Mohamed Waseem kurikkal M P',
-        'Surya Pratap', 'Jay Pawar', 'Anisha Kumari', 'Rohan Kumarraju',
+        'Dithya Ann Mathew',
+        'Chirumamilla Hamsa Veni', // Cohort 3
+        'Puneesh Hingorani', 'Shambhavi Kumari', 'Vikas Bishnoi', 'Akhil', 'K Sai Vaishnav Kumar',
+        'Utkarsh Raj', 'Abhishek Mohan', 'Surya Pratap', 'Jay Pawar', // Cohort 4
+        'Jampana Rohan Kumar Raju', 'Mohamed Waseem kurikkal M P', 'Shreshth Sahu', 'Lakshit Raina', // Cohort 6
         'Nitin Singh Sikarwar', 'Tappa Shaik Mohammed Vasif', 'Jyoti Raj', 'Akanksha Kumari',
-        'Keerthi Rithvik Teja', 'Vaibhav Kumar Singh', 'Tarun Rajput'
+        'Keerthi Rithvik Teja', 'Vaibhav Kumar Singh', 'Tarun Rajput' // Cohort 7
       ] },
       { label: 'Followups', members: [
-        'Chandrima Banik', 'Nishika Dwivedi', 'Anindita Maity', 'Jillella Akshaya Prajwala',
-        'Bevara Hemanth Kumar', 'Debjani Dutta Gupta', 'Kartik Kaushal', 'Navaneetha KS',
-        'D Joyce Blessia', 'Janani S P', 'Nara Sumanth', 'Mehak Rajput', 'Manisha Suresh Yadav',
-        'Aishu Ji Lochan', 'Pratham Rathor', 'Adyasha Pattanaik', 'Pranshu', 'Gayathri A',
-        'Dharani Lakshmi', 'P Swarna Lakshmi', 'Udita Singh', 'Aishwarya Arya', 'Samiksha Pilaniya',
-        'Vivek Kumar Singh', 'Tapas Patra', 'Shaik Suraj'
+        // ADD Followups
+        'Nishika Dwivedi', 'Anindita Maity', 'Jillella Akshaya Prajwala', 'Bevara Hemanth Kumar',
+        // EDU Followups
+        'Navaneetha KS', 'D Joyce Blessia', 'Janani S P', 'Nara Sumanth', 'Mehak Rajput',
+        // EMP Followups
+        'Manisha Suresh Yadav', 'Shaik Suraj', 'Vivek Kumar Singh', 'Tapas Patra',
+        'Pranshu', 'Aishwarya Arya', 'Samiksha Pilaniya',
+        'P Swarna Lakshmi', 'Dharani Lakshmi', 'Gayathri A', 'Udita Singh'
       ] }
     ] },
     { channel_id: 'CQRU28ES0', channel_name: '#sv-in-ops-add', categories: [
       { label: 'QC', members: [
-        'Vikash Sunaliya', 'Shafaque Shadni', 'Mohammad Sameem Nazki', 'Shlok Paliwal',
-        'Vanshika Sharma', 'Utsav Banerjee', 'Nishant Gupta', 'Manpreet Kaur', 'Alisha Chaudhary',
-        'Mitta Ruthika', 'Harshitha Sakkuri', 'Chuppa Harshitha', 'Talwinder Singh', 'Tanisha Thakur',
-        'Subhajit Debbarma', 'Saransh Jaggi', 'Anushka Jaiswal', 'Abhishek Sangwan',
-        'Sachin Kumar Singh', 'Vinay Pratap Singh', 'Manish Kumar Thakur', 'Nipun Singh',
-        'Aikansh Katiyar'
+        'Vikash Sunaliya', 'Shafaque Shadni', 'Shlok Paliwal', 'Vanshika Sharma', 'Utsav Banerjee',
+        'Nishant Gupta', 'Manpreet Kaur', // Cohort 1
+        'Talwinder Singh', 'Tanisha Thakur', 'Subhajit Debbarma', 'Saransh Jaggi', 'Anushka Jaiswal', 'Abhishek Sangwan', // Cohort 4
+        'Vinay Pratap Singh', 'Manish Kumar Thakur', 'Nipun Singh', 'Aikansh Katiyar' // Cohort 6
       ] },
       { label: 'Email Clearance', members: [
-        'Deepika S', 'Lavanya Dani', 'Riya Sinha', 'Sakshi Upesh Kamani', 'Md. Parvezuddin',
+        'Deepika S', 'Lavanya Dani', 'Riya Sinha', 'Md. Parvezuddin',
         'Divya Harish', 'Sanskar Shrivastava'
       ] }
     ] },
     { channel_id: 'C023SD1L2E7', channel_name: '#sv-in-ops-misc-checks', categories: [
       { label: 'MISC', members: [
         'Pratyush Badhani', 'Samriddhi Kundu', 'B Hemanth Reddy', 'Kousik Ruidas', 'Samraggee Saha',
-        'Swati Jampal', 'Abhraneel Chattopadhyay', 'Shivam Kumar Jha', 'Pavithra M'
+        'Swati Jampal', 'Abhraneel Chattopadhyay', 'Shivam Kumar Jha'
       ] },
       { label: 'Payment Settlement', members: ['Barsha Agarwal', 'Shivam Bhardwaj'] }
     ] },
     { channel_id: 'C08TMLA7YSU', channel_name: '#sv-in-ops-research', categories: [
       { label: 'Research', members: [
-        'Daraksha Hussain', 'Shuman Thappa', 'Satarupa Konar', 'Al Hasan', 'Adithyan S', 'Aman Raj',
-        'Hasamuddin Ansari', 'Ballani Venkata Avinas', 'Poojasri Adambhakam'
+        'Shuman Thappa', 'Satarupa Konar', 'Al Hasan', 'Poojasri Adambhakam',
+        'Adithyan S', 'Aman Raj', 'Hasamuddin Ansari', 'Ballani Venkata Avinas', // Cohort 5
+        'Khushi Kumari', 'Yusra Waseem' // Cohort 6
       ] }
     ] },
     { channel_id: 'C08MMSLV43H', channel_name: '#sv-in-ops-ref', categories: [
@@ -89,8 +93,7 @@ var Weekly = (function () {
     ] },
     { channel_id: 'C07QAABSJ6R', channel_name: '#sv-in-ops-additional-tasks', categories: [
       { label: 'Case Addition', members: [
-        'Manas Kumar Mishra', 'Abhay Chandrakant Nayak', 'Rahul Sutradhar', 'Ankita Basak',
-        'Chirag Sethi', 'Sonia Thakur'
+        'Manas Kumar Mishra', 'Rahul Sutradhar', 'Ankita Basak', 'Chirag Sethi', 'Sonia Thakur'
       ] }
     ] }
   ];
@@ -119,7 +122,10 @@ var Weekly = (function () {
     WHATSAPP_FOLLOW_UP: ['WFU', 'WhatsApp Follow Up']
   };
 
-  // (name, type, shift, daily_target, cohort)
+  // (name, type, shift, daily_target, cohort) — synced from the "Ops Team Roster"
+  // artifact (as of 2026-09-07). That artifact is the source of truth going
+  // forward; re-sync this array from it rather than editing names/targets here
+  // from memory.
   var ROSTER = [
     ['Subhashree L', 'FTE', 'MF', 270, null], ['Priyanka Krishnan', 'FTE', 'MF', 270, null],
     ['Manash Pratim Kashyap', 'FTE', 'MF', 270, null], ['Anitha Sagari Ravirala', 'FTE', 'TS', 270, null],
@@ -129,8 +135,11 @@ var Weekly = (function () {
     ['Divyajot Kaur', 'Intern', 'MF', 250, 4], ['Mohd Azfar Khan', 'Intern', 'MF', 250, 4],
     ['Noshin M K', 'Intern', 'MF', 250, 4], ['Anand Kumar', 'Intern', 'MF', 250, 4],
     ['Chinthala VSSSL Mokshajna', 'Intern', 'MF', 250, 4], ['Anmol Sharma', 'Intern', 'MF', 250, 4],
-    ['Kondeti Ashvitha', 'Intern', 'MF', 250, null], ['Sahil Vilas Mule', 'Intern', 'MF', 250, null],
-    ['Nishmeet Singh Rajpal', 'Intern', 'MF', 250, null],
+    ['Vaishali Bhandari', 'Intern', 'MF', 250, 7], ['Shouriya Tayal', 'Intern', 'MF', 250, 7],
+    ['Vipul Patial', 'Intern', 'MF', 250, 7], ['Prashant Gupta', 'Intern', 'MF', 250, 7],
+    ['Pragati Kashyap', 'Intern', 'MF', 250, 7], ['Anmol Nagpal', 'Intern', 'MF', 250, 7],
+    ['Kishan Yadav', 'Intern', 'MF', 250, 7], ['Lovely', 'Intern', 'MF', 250, 7],
+    ['Siddhartha Kumar', 'Intern', 'MF', 250, 7],
 
     ['Dithya Ann Mathew', 'FTE', 'MF', 200, null],
     ['Chirumamilla Hamsa Veni', 'Intern', 'MF', 180, 3], ['Puneesh Hingorani', 'Intern', 'MF', 180, 4],
@@ -138,23 +147,21 @@ var Weekly = (function () {
     ['Akhil', 'Intern', 'MF', 180, 4], ['K Sai Vaishnav Kumar', 'Intern', 'MF', 180, 4],
     ['Utkarsh Raj', 'Intern', 'MF', 180, 4], ['Abhishek Mohan', 'Intern', 'MF', 180, 4],
     ['Surya Pratap', 'Intern', 'MF', 180, 4], ['Jay Pawar', 'Intern', 'MF', 180, 4],
-    ['Rohan Kumarraju', 'Intern', 'MF', 180, 6], ['Mohamed Waseem kurikkal M P', 'Intern', 'MF', 180, 6],
+    ['Jampana Rohan Kumar Raju', 'Intern', 'MF', 180, 6], ['Mohamed Waseem kurikkal M P', 'Intern', 'MF', 180, 6],
     ['Shreshth Sahu', 'Intern', 'MF', 180, 6], ['Lakshit Raina', 'Intern', 'MF', 180, 6],
-    ['Anisha Kumari', 'Intern', 'MF', 180, 6],
-    ['E Tarun', 'Intern', 'MF', 180, null], ['Shaeeshta Shaila', 'Intern', 'MF', 180, null],
-    ['Peddireddy Vasu Deva Reddy', 'Intern', 'MF', 180, null], ['Priyanka Lohia', 'Intern', 'MF', 180, null],
-    ['Pentapalli Charan', 'Intern', 'MF', 180, null],
+    ['Nitin Singh Sikarwar', 'Intern', 'MF', 180, 7], ['Tappa Shaik Mohammed Vasif', 'Intern', 'MF', 180, 7],
+    ['Jyoti Raj', 'Intern', 'MF', 180, 7], ['Akanksha Kumari', 'Intern', 'MF', 180, 7],
+    ['Keerthi Rithvik Teja', 'Intern', 'MF', 180, 7], ['Vaibhav Kumar Singh', 'Intern', 'MF', 180, 7],
+    ['Tarun Rajput', 'Intern', 'MF', 180, 7],
 
     ['Vikash Sunaliya', 'FTE', 'MF', 260, null], ['Shafaque Shadni', 'FTE', 'TS', 260, null],
-    ['Mohammad Sameem Nazki', 'FTE', 'MF', 260, null], ['Shlok Paliwal', 'FTE', 'TS', 260, null],
+    ['Shlok Paliwal', 'FTE', 'TS', 260, null],
     ['Vanshika Sharma', 'FTE', 'TS', 260, null], ['Utsav Banerjee', 'FTE', 'MF', 260, null],
     ['Nishant Gupta', 'Intern', 'MF', 240, 1], ['Manpreet Kaur', 'Intern', 'MF', 240, 1],
-    ['Alisha Chaudhary', 'Intern', 'MF', 240, 1], ['Mitta Ruthika', 'Intern', 'MF', 240, 1],
-    ['Harshitha Sakkuri', 'Intern', 'MF', 240, 2], ['Chuppa Harshitha', 'Intern', 'MF', 240, 2],
     ['Talwinder Singh', 'Intern', 'MF', 240, 4], ['Tanisha Thakur', 'Intern', 'MF', 240, 4],
     ['Subhajit Debbarma', 'Intern', 'MF', 240, 4], ['Saransh Jaggi', 'Intern', 'MF', 240, 4],
     ['Anushka Jaiswal', 'Intern', 'MF', 240, 4], ['Abhishek Sangwan', 'Intern', 'MF', 240, 4],
-    ['Sachin Kumar Singh', 'Intern', 'MF', 240, 4], ['Vinay Pratap Singh', 'Intern', 'MF', 240, 6],
+    ['Vinay Pratap Singh', 'Intern', 'MF', 240, 6],
     ['Manish Kumar Thakur', 'Intern', 'MF', 240, 6], ['Nipun Singh', 'Intern', 'MF', 240, 6],
     ['Aikansh Katiyar', 'Intern', 'MF', 240, 6],
 
@@ -162,43 +169,51 @@ var Weekly = (function () {
     ['B Hemanth Reddy', 'FTE', 'TS', 250, null], ['Kousik Ruidas', 'FTE', 'MF', 250, null],
     ['Samraggee Saha', 'FTE', 'MF', 250, null], ['Swati Jampal', 'FTE', 'TS', 250, null],
     ['Abhraneel Chattopadhyay', 'FTE', 'MF', 250, null], ['Shivam Kumar Jha', 'FTE', 'MF', 250, null],
-    ['Pavithra M', 'FTE', 'TS', 250, null],
 
     ['Barsha Agarwal', 'FTE', 'MF', 140, null], ['Shivam Bhardwaj', 'FTE', 'TS', 140, null],
 
-    ['Daraksha Hussain', 'FTE', 'MF', 130, null], ['Shuman Thappa', 'FTE', 'TS', 130, null],
+    ['Shuman Thappa', 'FTE', 'TS', 130, null],
     ['Satarupa Konar', 'FTE', 'MF', 130, null], ['Al Hasan', 'FTE', 'MF', 130, null],
     ['Poojasri Adambhakam', 'FTE', 'TS', 130, null], ['Adithyan S', 'Intern', 'MF', 115, 5],
     ['Aman Raj', 'Intern', 'MF', 115, 5], ['Hasamuddin Ansari', 'Intern', 'MF', 115, 5],
     ['Ballani Venkata Avinas', 'Intern', 'MF', 115, 5],
+    ['Khushi Kumari', 'Intern', 'MF', 115, 6], ['Yusra Waseem', 'Intern', 'MF', 115, 6],
 
     ['Nazia Hasan', 'FTE', 'TS', 195, null], ['Sakshi Bhuyan', 'FTE', 'MF', 195, null],
     ['Kishore M', 'FTE', 'MF', 195, null], ['Raunak Kumar', 'Intern', 'MF', 170, 5],
     ['Sahil', 'Intern', 'MF', 170, 5],
 
     // Case Addition daily target: 45/day for FTE, 35/day for Intern (updated 8 Sep 2026).
-    ['Manas Kumar Mishra', 'FTE', 'TS', 45, null], ['Abhay Chandrakant Nayak', 'FTE', 'TS', 45, null],
+    ['Manas Kumar Mishra', 'FTE', 'TS', 45, null],
     ['Rahul Sutradhar', 'FTE', 'MF', 45, null], ['Ankita Basak', 'FTE', 'MF', 45, null],
     ['Chirag Sethi', 'FTE', 'MF', 45, null], ['Sonia Thakur', 'FTE', 'TS', 45, null],
 
     ['Nishika Dwivedi', 'FTE', 'TS', 145, null], ['Anindita Maity', 'FTE', 'TS', 145, null],
     ['Jillella Akshaya Prajwala', 'FTE', 'TS', 145, null], ['Bevara Hemanth Kumar', 'FTE', 'MF', 145, null],
     ['Navaneetha KS', 'FTE', 'MF', 140, null], ['D Joyce Blessia', 'FTE', 'TS', 140, null],
+    ['Janani S P', 'FTE', 'MF', 140, null],
     ['Nara Sumanth', 'Intern', 'MF', 120, 5], ['Mehak Rajput', 'Intern', 'MF', 120, 5],
     ['Manisha Suresh Yadav', 'FTE', 'MF', 110, null], ['Shaik Suraj', 'FTE', 'MF', 110, null],
     ['Vivek Kumar Singh', 'FTE', 'MF', 110, null], ['Tapas Patra', 'FTE', 'MF', 110, null],
-    ['Aishu Ji Lochan', 'Intern', 'MF', 95, 3], ['Pranshu', 'Intern', 'MF', 95, 3],
+    ['Pranshu', 'Intern', 'MF', 95, 3],
     ['Aishwarya Arya', 'Intern', 'MF', 95, 4], ['Samiksha Pilaniya', 'Intern', 'MF', 95, 4],
     ['P Swarna Lakshmi', 'FTE', 'MF', 110, null], ['Dharani Lakshmi', 'FTE', 'MF', 110, null],
     ['Gayathri A', 'FTE', 'MF', 110, null], ['Udita Singh', 'FTE', 'MF', 110, null],
 
     ['Deepika S', 'FTE', 'MF', 220, null], ['Lavanya Dani', 'FTE', 'TS', 220, null],
     ['Riya Sinha', 'Intern', 'MF', 195, 5],
-    ['Sakshi Upesh Kamani', 'FTE', 'TS', 220, null], ['Md. Parvezuddin', 'Intern', 'MF', 195, 5],
+    ['Md. Parvezuddin', 'Intern', 'MF', 195, 5],
     ['Divya Harish', 'FTE', 'MF', 325, null], ['Sanskar Shrivastava', 'FTE', 'TS', 325, null]
   ];
 
-  var NEW_JOINERS = { 'Vinay Pratap Singh': true, 'Manish Kumar Thakur': true, 'Nipun Singh': true, 'Aikansh Katiyar': true };
+  var NEW_JOINERS = {
+    'Vinay Pratap Singh': true, 'Manish Kumar Thakur': true, 'Nipun Singh': true, 'Aikansh Katiyar': true,
+    // Cohort 7, joined 07-Sep-2026
+    'Vaishali Bhandari': true, 'Shouriya Tayal': true, 'Vipul Patial': true, 'Prashant Gupta': true,
+    'Pragati Kashyap': true, 'Anmol Nagpal': true, 'Kishan Yadav': true, 'Lovely': true, 'Siddhartha Kumar': true,
+    'Nitin Singh Sikarwar': true, 'Tappa Shaik Mohammed Vasif': true, 'Jyoti Raj': true, 'Akanksha Kumari': true,
+    'Keerthi Rithvik Teja': true, 'Vaibhav Kumar Singh': true, 'Tarun Rajput': true
+  };
 
   var NAME_PREFIXES = [
     'Payment Settlement', 'Customer Ops', 'Q C', 'R T', 'C S', 'A T', 'V M',
@@ -1035,12 +1050,12 @@ var Weekly = (function () {
       });
     });
 
-    // ── HR PIP post: new thread, FTE then Cohort 1-6 ──
+    // ── HR PIP post: new thread, FTE then Cohort 1-7 ──
     var groups = [];
     var fteRows = below70.filter(function (r) { return r.type === 'FTE'; }).sort(function (a, b) { return a.pct_achieved - b.pct_achieved; });
     if (fteRows.length) groups.push(['FTE', fteRows]);
     var internRows = below70.filter(function (r) { return r.type === 'Intern'; });
-    for (var c = 1; c <= 6; c++) {
+    for (var c = 1; c <= 7; c++) {
       var cRows = internRows.filter(function (r) { return r.cohort === c; }).sort(function (a, b) { return a.pct_achieved - b.pct_achieved; });
       if (cRows.length) groups.push(['Cohort ' + c, cRows]);
     }

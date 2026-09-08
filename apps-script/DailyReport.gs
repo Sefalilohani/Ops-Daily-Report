@@ -17,6 +17,9 @@ var Daily = (function () {
   var TEST_CHANNEL_ALIASES = { 'testing-sefali': 'C0AGRE19V6U' };
 
   // ── CHANNEL / TEAM CONFIG ──────────────────────────────────────
+  // Member lists synced from the "Ops Team Roster" artifact (as of 2026-09-07) —
+  // that artifact is the source of truth for who's active on which team; refer to
+  // it (not this file's git history) when posting reports or checking membership.
   var CHANNELS = [
     {
       channel_id: 'CS5CX8LPQ', // #sv-in-ops-caseanalysis
@@ -24,12 +27,11 @@ var Daily = (function () {
         { label: 'CA + Initiation', members: [
           'Subhashree L', 'Priyanka Krishnan', 'Manash Pratim Kashyap', 'Anitha Sagari Ravirala',
           'Aaiyana Vinod Sharma',
-          'Abhishek Parashari',
-          'Abhishek Rawat', 'Adithya Padmanabhan', 'Indukuri Niranjan Reddy', 'Ishita Mishra',
+          'Abhishek Parashari', 'Abhishek Rawat', 'Adithya Padmanabhan', 'Indukuri Niranjan Reddy', 'Ishita Mishra',
           'Divyajot Kaur', 'Mohd Azfar Khan', 'Noshin M K', 'Anand Kumar',
-          'Chinthala VSSSL Mokshajna', 'Anmol Sharma',
+          'Chinthala VSSSL Mokshajna', 'Anmol Sharma', // Cohort 4
           'Vaishali Bhandari', 'Shouriya Tayal', 'Vipul Patial', 'Prashant Gupta',
-          'Pragati Kashyap', 'Anmol Nagpal', 'Kishan Yadav', 'Lovely', 'Siddhartha Kumar'
+          'Pragati Kashyap', 'Anmol Nagpal', 'Kishan Yadav', 'Lovely', 'Siddhartha Kumar' // Cohort 7
         ] }
       ]
     },
@@ -38,20 +40,22 @@ var Daily = (function () {
       categories: [
         { label: 'Grading', members: [
           'Dithya Ann Mathew',
-          'E Tarun', 'Shaeeshta Shaila', 'Chirumamilla Hamsa Veni',
-          'Peddireddy Vasu Deva Reddy', 'Priyanka Lohia', 'Shreshth Sahu', 'Puneesh Hingorani', 'Shambhavi Kumari',
-          'Vikas Bishnoi', 'Akhil', 'Pentapalli Charan', 'K Sai Vaishnav Kumar', 'Lakshit Raina',
-          'Utkarsh Raj', 'Abhishek Mohan', 'Mohamed Waseem kurikkal M P', 'Surya Pratap', 'Jay Pawar', 'Anisha Kumari', 'Rohan Kumarraju',
+          'Chirumamilla Hamsa Veni', // Cohort 3
+          'Puneesh Hingorani', 'Shambhavi Kumari', 'Vikas Bishnoi', 'Akhil', 'K Sai Vaishnav Kumar',
+          'Utkarsh Raj', 'Abhishek Mohan', 'Surya Pratap', 'Jay Pawar', // Cohort 4
+          'Jampana Rohan Kumar Raju', 'Mohamed Waseem kurikkal M P', 'Shreshth Sahu', 'Lakshit Raina', // Cohort 6
           'Nitin Singh Sikarwar', 'Tappa Shaik Mohammed Vasif', 'Jyoti Raj', 'Akanksha Kumari',
-          'Keerthi Rithvik Teja', 'Vaibhav Kumar Singh', 'Tarun Rajput'
+          'Keerthi Rithvik Teja', 'Vaibhav Kumar Singh', 'Tarun Rajput' // Cohort 7
         ] },
         { label: 'Followups', members: [
-          'Chandrima Banik', 'Nishika Dwivedi', 'Anindita Maity', 'Jillella Akshaya Prajwala',
-          'Bevara Hemanth Kumar', 'Debjani Dutta Gupta',
-          'Kartik Kaushal', 'Navaneetha KS', 'D Joyce Blessia', 'Janani S P', 'Nara Sumanth',
-          'Mehak Rajput',
-          'Manisha Suresh Yadav', 'Aishu Ji Lochan', 'Pratham Rathor', 'Adyasha Pattanaik', 'Pranshu', 'Gayathri A', 'Dharani Lakshmi', 'P Swarna Lakshmi', 'Udita Singh',
-          'Aishwarya Arya', 'Samiksha Pilaniya', 'Vivek Kumar Singh', 'Tapas Patra', 'Shaik Suraj'
+          // ADD Followups
+          'Nishika Dwivedi', 'Anindita Maity', 'Jillella Akshaya Prajwala', 'Bevara Hemanth Kumar',
+          // EDU Followups
+          'Navaneetha KS', 'D Joyce Blessia', 'Janani S P', 'Nara Sumanth', 'Mehak Rajput',
+          // EMP Followups
+          'Manisha Suresh Yadav', 'Shaik Suraj', 'Vivek Kumar Singh', 'Tapas Patra',
+          'Pranshu', 'Aishwarya Arya', 'Samiksha Pilaniya',
+          'P Swarna Lakshmi', 'Dharani Lakshmi', 'Gayathri A', 'Udita Singh'
         ] }
       ]
     },
@@ -59,16 +63,14 @@ var Daily = (function () {
       channel_id: 'CQRU28ES0', // #sv-in-ops-add (Address Verification)
       categories: [
         { label: 'QC', members: [
-          'Vikash Sunaliya', 'Shafaque Shadni', 'Mohammad Sameem Nazki', 'Shlok Paliwal',
-          'Vanshika Sharma', 'Utsav Banerjee', 'Nishant Gupta', 'Manpreet Kaur',
-          'Alisha Chaudhary', 'Mitta Ruthika',
-          'Harshitha Sakkuri', 'Chuppa Harshitha', 'Talwinder Singh',
-          'Tanisha Thakur', 'Subhajit Debbarma', 'Saransh Jaggi', 'Anushka Jaiswal', 'Abhishek Sangwan',
-          'Sachin Kumar Singh', 'Vinay Pratap Singh', 'Manish Kumar Thakur', 'Nipun Singh', 'Aikansh Katiyar'
+          'Vikash Sunaliya', 'Shafaque Shadni', 'Shlok Paliwal', 'Vanshika Sharma', 'Utsav Banerjee',
+          'Nishant Gupta', 'Manpreet Kaur', // Cohort 1
+          'Talwinder Singh', 'Tanisha Thakur', 'Subhajit Debbarma', 'Saransh Jaggi', 'Anushka Jaiswal', 'Abhishek Sangwan', // Cohort 4
+          'Vinay Pratap Singh', 'Manish Kumar Thakur', 'Nipun Singh', 'Aikansh Katiyar' // Cohort 6
         ] },
         { label: 'Email Clearance', members: [
           'Deepika S', 'Lavanya Dani', 'Riya Sinha',
-          'Sakshi Upesh Kamani', 'Md. Parvezuddin',
+          'Md. Parvezuddin',
           'Divya Harish', 'Sanskar Shrivastava'
         ] }
       ]
@@ -78,7 +80,7 @@ var Daily = (function () {
       categories: [
         { label: 'MISC', members: [
           'Pratyush Badhani', 'Samriddhi Kundu', 'B Hemanth Reddy', 'Kousik Ruidas', 'Samraggee Saha',
-          'Swati Jampal', 'Abhraneel Chattopadhyay', 'Shivam Kumar Jha', 'Pavithra M'
+          'Swati Jampal', 'Abhraneel Chattopadhyay', 'Shivam Kumar Jha'
         ] },
         { label: 'Payment Settlement', members: ['Barsha Agarwal', 'Shivam Bhardwaj'] }
       ]
@@ -87,8 +89,7 @@ var Daily = (function () {
       channel_id: 'C07QAABSJ6R', // #sv-in-ops-additional-tasks
       categories: [
         { label: 'Case Addition', members: [
-          'Manas Kumar Mishra', 'Abhay Chandrakant Nayak', 'Rahul Sutradhar', 'Ankita Basak',
-          'Chirag Sethi', 'Sonia Thakur'
+          'Manas Kumar Mishra', 'Rahul Sutradhar', 'Ankita Basak', 'Chirag Sethi', 'Sonia Thakur'
         ] }
       ]
     },
@@ -96,10 +97,9 @@ var Daily = (function () {
       channel_id: 'C08TMLA7YSU', // #sv-in-ops-research
       categories: [
         { label: 'Research', members: [
-          'Daraksha Hussain', 'Shuman Thappa', 'Satarupa Konar',
-          'Al Hasan', 'Adithyan S', 'Aman Raj', 'Hasamuddin Ansari',
-          'Ballani Venkata Avinas', 'Khushi', 'Yusra Waseem',
-          'Poojasri Adambhakam'
+          'Shuman Thappa', 'Satarupa Konar', 'Al Hasan', 'Poojasri Adambhakam',
+          'Adithyan S', 'Aman Raj', 'Hasamuddin Ansari', 'Ballani Venkata Avinas', // Cohort 5
+          'Khushi Kumari', 'Yusra Waseem' // Cohort 6
         ] }
       ]
     },
