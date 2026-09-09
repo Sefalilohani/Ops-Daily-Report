@@ -845,6 +845,8 @@ var Daily = (function () {
     var agentData = buildAgentData(completedRows, errorRows, caseAddRows);
     var assignments = resolveMemberAssignments(agentData);
 
+    var failures = [];
+
     CHANNELS.forEach(function (channelCfg) {
       var hasMembers = channelCfg.categories.some(function (c) { return c.members.length; });
       if (!hasMembers) {
@@ -852,18 +854,29 @@ var Daily = (function () {
         return;
       }
 
-      var messages = formatChannelMessages(channelCfg, dateLabel, agentData, assignments);
-      var targetChannel = testChannelId || channelCfg.channel_id;
+      // Each channel is independent — one bad/inaccessible channel (e.g. the bot
+      // hasn't been invited to it) must not abort every other team's report.
+      try {
+        var messages = formatChannelMessages(channelCfg, dateLabel, agentData, assignments);
+        var targetChannel = testChannelId || channelCfg.channel_id;
 
-      messages.forEach(function (message) {
-        if (testChannelId) {
-          message = '_[TEST RUN — would normally post to ' + channelCfg.channel_id + ']_\n' + message;
-        }
-        postSlackMessage(slackToken, targetChannel, message).forEach(function (ts) {
-          Logger.log('Posted to ' + targetChannel + ' (ts=' + ts + ')');
+        messages.forEach(function (message) {
+          if (testChannelId) {
+            message = '_[TEST RUN — would normally post to ' + channelCfg.channel_id + ']_\n' + message;
+          }
+          postSlackMessage(slackToken, targetChannel, message).forEach(function (ts) {
+            Logger.log('Posted to ' + targetChannel + ' (ts=' + ts + ')');
+          });
         });
-      });
+      } catch (e) {
+        Logger.log('ERROR posting to channel ' + channelCfg.channel_id + ': ' + e + ' — continuing with remaining channels.');
+        failures.push(channelCfg.channel_id + ': ' + e);
+      }
     });
+
+    if (failures.length) {
+      throw new Error('Daily report finished with ' + failures.length + ' channel failure(s): ' + failures.join(' | '));
+    }
   }
 
   return { run: run };

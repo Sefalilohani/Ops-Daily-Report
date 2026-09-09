@@ -935,6 +935,7 @@ var Weekly = (function () {
     }
 
     var below70 = [];
+    var failures = [];
 
     CHANNELS.forEach(function (channel) {
       channel.categories.forEach(function (category) {
@@ -1025,10 +1026,18 @@ var Weekly = (function () {
 
         var targetChannel = testChannelId || channel.channel_id;
         Logger.log('  Posting ' + label + ' -> ' + targetChannel + ' (' + messages.length + ' messages)');
-        messages.forEach(function (m) {
-          if (testChannelId) m = '_[TEST RUN — would normally post to ' + channel.channel_id + ']_\n' + m;
-          postSlackMessage(slackToken, targetChannel, m);
-        });
+        // One channel/category failing to post (e.g. the bot hasn't been invited
+        // to that channel) must not stop the rest of the teams' reports, or the
+        // below-80% PIP collection below, from running.
+        try {
+          messages.forEach(function (m) {
+            if (testChannelId) m = '_[TEST RUN — would normally post to ' + channel.channel_id + ']_\n' + m;
+            postSlackMessage(slackToken, targetChannel, m);
+          });
+        } catch (e) {
+          Logger.log('ERROR posting ' + label + ' to channel ' + targetChannel + ': ' + e + ' — continuing with remaining teams.');
+          failures.push(label + ' (' + targetChannel + '): ' + e);
+        }
 
         // Collect below-80%-of-target rows for the HR PIP post.
         members.forEach(function (member) {
@@ -1070,32 +1079,41 @@ var Weekly = (function () {
     if (unknownRows.length) groups.push(['Unclassified', unknownRows]);
 
     if (groups.length) {
-      var hrChannel = testChannelId || HR_CHANNEL_ID;
-      var intro = '🚨 *PIP Review — Below 80% of Target (' + DATE_LABEL + ')*';
-      var threadTs = postSlackMessage(slackToken, hrChannel, intro);
-      groups.forEach(function (pair) {
-        var groupLabel = pair[0], grows = pair[1];
-        var cols = ['Agent', 'Team', 'Completed', 'Errors', 'Avg/Day', 'Target', '%Ach', 'Leaves', 'WFH'];
-        var displayRows = grows.map(function (r) {
-          var marker = r.is_new_joiner ? ' (new joiner)' : '';
-          return [r.name + marker, r.team, String(r.completed), String(r.errors), fmt(r.avg_day),
-            fmt(r.target), r.pct_achieved + '%', fmt(r.leaves), fmt(r.wfh)];
+      try {
+        var hrChannel = testChannelId || HR_CHANNEL_ID;
+        var intro = '🚨 *PIP Review — Below 80% of Target (' + DATE_LABEL + ')*';
+        var threadTs = postSlackMessage(slackToken, hrChannel, intro);
+        groups.forEach(function (pair) {
+          var groupLabel = pair[0], grows = pair[1];
+          var cols = ['Agent', 'Team', 'Completed', 'Errors', 'Avg/Day', 'Target', '%Ach', 'Leaves', 'WFH'];
+          var displayRows = grows.map(function (r) {
+            var marker = r.is_new_joiner ? ' (new joiner)' : '';
+            return [r.name + marker, r.team, String(r.completed), String(r.errors), fmt(r.avg_day),
+              fmt(r.target), r.pct_achieved + '%', fmt(r.leaves), fmt(r.wfh)];
+          });
+          var widths = cols.map(function (c, i) {
+            return Math.max(c.length, Math.max.apply(null, displayRows.map(function (dr) { return dr[i].length; }))) + 2;
+          });
+          var headerLine = cols.map(function (c, i) { return i === 0 ? c.padEnd(widths[i]) : c.padStart(widths[i]); }).join('');
+          var sepLine = '-'.repeat(headerLine.length);
+          var bodyLines = [headerLine, sepLine].concat(displayRows.map(function (dr) {
+            return dr.map(function (v, i) { return i === 0 ? v.padEnd(widths[i]) : v.padStart(widths[i]); }).join('');
+          }));
+          var body = '*' + groupLabel + '*\n```\n' + bodyLines.join('\n') + '\n```';
+          postSlackMessage(slackToken, hrChannel, body, threadTs);
         });
-        var widths = cols.map(function (c, i) {
-          return Math.max(c.length, Math.max.apply(null, displayRows.map(function (dr) { return dr[i].length; }))) + 2;
-        });
-        var headerLine = cols.map(function (c, i) { return i === 0 ? c.padEnd(widths[i]) : c.padStart(widths[i]); }).join('');
-        var sepLine = '-'.repeat(headerLine.length);
-        var bodyLines = [headerLine, sepLine].concat(displayRows.map(function (dr) {
-          return dr.map(function (v, i) { return i === 0 ? v.padEnd(widths[i]) : v.padStart(widths[i]); }).join('');
-        }));
-        var body = '*' + groupLabel + '*\n```\n' + bodyLines.join('\n') + '\n```';
-        postSlackMessage(slackToken, hrChannel, body, threadTs);
-      });
-      postSlackMessage(slackToken, hrChannel, HR_PIP_TAGS + ' — please review the above and confirm on PIP.', threadTs);
-      Logger.log('  Posted HR PIP thread with ' + below70.length + ' below-80% rows across ' + groups.length + ' groups');
+        postSlackMessage(slackToken, hrChannel, HR_PIP_TAGS + ' — please review the above and confirm on PIP.', threadTs);
+        Logger.log('  Posted HR PIP thread with ' + below70.length + ' below-80% rows across ' + groups.length + ' groups');
+      } catch (e) {
+        Logger.log('ERROR posting HR PIP thread: ' + e);
+        failures.push('HR PIP thread: ' + e);
+      }
     } else {
       Logger.log('  No below-80%-of-target rows this week — skipping HR PIP post');
+    }
+
+    if (failures.length) {
+      throw new Error('Weekly report finished with ' + failures.length + ' failure(s): ' + failures.join(' | '));
     }
   }
 
